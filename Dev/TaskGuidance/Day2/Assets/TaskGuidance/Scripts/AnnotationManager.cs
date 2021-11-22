@@ -13,7 +13,7 @@ namespace TaskGuidance
         #region Member Variables
         public GameObject FakeRoot;
 
-        [Tooltip("The container where annotations will be created.")]
+        [Tooltip("The container where annotation visuals will be created.")]
         [SerializeField]
         private Transform annotationContainer;
 
@@ -21,26 +21,26 @@ namespace TaskGuidance
         [SerializeField]
         private GameObject annotationPrefab;
 
-        [Tooltip("The annotation data that should be visualized.")]
+        [Tooltip("The app data that should be visualized.")]
         [SerializeField]
-        private AnnotationData annotations;
+        private AnnotationAppData appData;
         #endregion // Member Variables
 
         #region Member Variables
         /// <summary>
-        /// Visualizes all of the annotations stored in the <see cref="Annotations"/> property.
+        /// Visualizes all of the annotations stored in the <see cref="AppData"/> property.
         /// </summary>
         private void VisualizeAnnotations()
         {
             // Make sure we have data
-            if ((annotations == null) || (annotations.AnnotatedObjects == null) || (annotations.AnnotatedObjects.Count < 1))
+            if ((appData == null) || (appData.AnnotatedObjects == null) || (appData.AnnotatedObjects.Count < 1))
             {
                 Debug.LogWarning($"{nameof(AnnotationManager)}: No annotations to visualize.");
                 return;
             }
 
             // Visualize
-            foreach (var ao in annotations.AnnotatedObjects)
+            foreach (var ao in appData.AnnotatedObjects)
             {
                 // What type of object
                 switch (ao.ObjectType)
@@ -62,49 +62,16 @@ namespace TaskGuidance
         /// <param name="annotations">
         /// The annotations to visualize.
         /// </param>
-        /// <param name="parent">
+        /// <param name="targetParent">
         /// The parent of the annotations.
         /// </param>
-        private void VisualizeAnnotations(List<Annotation> annotations, Transform parent)
+        private void VisualizeAnnotations(List<AnnotationData> annotations, Transform targetParent)
         {
-            // Keep track of how many annotaitons we've visualized on this parent
-            int annotationCount=0;
-
             // Render each annotation
-            foreach (var annotation in annotations)
+            foreach (var annData in annotations)
             {
-                // Increment the annotation count
-                annotationCount++;
-
-                // Create an empty game object where the target of the tooltip should be
-                GameObject target = new GameObject();
-
-                // Give the target a name
-                target.name = $"Target-{annotationCount}";
-
-                // Make it a child of the parent
-                target.transform.SetParent(parent, worldPositionStays: false);
-
-                // Move the target to where it should be relative to its parent
-                target.transform.localPosition = annotation.Offset;
-
-                // Create an instance of the annotation prefab in the annotation container
-                GameObject prefab = GameObject.Instantiate(annotationPrefab, annotationContainer);
-
-                // Give it a name
-                prefab.name = $"Annotation-{annotationCount}";
-
-                // Find the tooltip connector
-                ToolTipConnector connector = prefab.GetComponentInChildren<ToolTipConnector>();
-                if (connector == null)
-                {
-                    Debug.LogError($"{nameof(AnnotationManager)}: Annotation prefab doesn't incldue a {nameof(ToolTipConnector)}.");
-                    return;
-                }
-
-                // Configure the tooltip connector
-                connector.ConnectorFollowingType = ConnectorFollowType.PositionAndYRotation;
-                connector.Target = target;
+                // Visualize the annotation data
+                AnnotationHelper.Visualize(annotationPrefab, annotationContainer, targetParent, annData);
             }
         }
 
@@ -112,9 +79,9 @@ namespace TaskGuidance
         /// Visualizes all of the annotations on an Azure Spatial Anchor.
         /// </summary>
         /// <param name="obj">
-        /// The <see cref="AnnotatedObject"/> that represents the Azure Spatial Anchor.
+        /// The <see cref="AnnotatedObjectData"/> that represents the Azure Spatial Anchor.
         /// </param>
-        private void VisualizeASA(AnnotatedObject obj)
+        private void VisualizeASA(AnnotatedObjectData obj)
         {
             // TODO: Load the Azure Spatial Achor
 
@@ -139,7 +106,7 @@ namespace TaskGuidance
 
         #region Public Properties
         /// <summary>
-        /// Gets or sets the container where annotations will be created.
+        /// Gets or sets the parent where annotations will be created.
         /// </summary>
         public Transform AnnotationContainer { get => annotationContainer; set => annotationContainer = value; }
 
@@ -152,9 +119,9 @@ namespace TaskGuidance
         public GameObject AnnotationPrefab { get => annotationPrefab; set => annotationPrefab = value; }
 
         /// <summary>
-        /// Gets or sets the annotation data that should be visualized.
+        /// Gets or sets the app data that should be visualized.
         /// </summary>
-        public AnnotationData Annotations { get => annotations; set => annotations = value; }
+        public AnnotationAppData AppData { get => appData; set => appData = value; }
         #endregion // Public Properties
     }
 }
