@@ -260,6 +260,36 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!1 &754840194
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 754840195}
+  m_Layer: 0
+  m_Name: Annotations
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &754840195
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 754840194}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 869974353}
+  m_RootOrder: 1
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &851589916
 GameObject:
   m_ObjectHideFlags: 0
@@ -472,6 +502,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 851589917}
+  - {fileID: 754840195}
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -678,6 +709,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2111048454}
   - component: {fileID: 2111048453}
+  - component: {fileID: 2111048455}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -698,8 +730,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   FakeRoot: {fileID: 851589916}
+  annotationContainer: {fileID: 754840195}
   annotationPrefab: {fileID: 1083549605185280, guid: afaef0108a478c44a9eac26658bc29bf, type: 3}
-  annotations: {fileID: 11400000, guid: 7137dfc680494c042b484a528994094f, type: 2}
+  appData: {fileID: 11400000, guid: 7137dfc680494c042b484a528994094f, type: 2}
 --- !u!4 &2111048454
 Transform:
   m_ObjectHideFlags: 0
@@ -714,3 +747,20 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 4
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2111048455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111048452}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec823a26ea446b84a97f8b4db210e839, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isFocusRequired: 0
+  annotationContainer: {fileID: 754840195}
+  annotationPrefab: {fileID: 1083549605185280, guid: afaef0108a478c44a9eac26658bc29bf, type: 3}
+  objectData: {fileID: 11400000, guid: a9f4e67b5fd63644b8e75961083ada5e, type: 2}
+  objectVisual: {fileID: 0}

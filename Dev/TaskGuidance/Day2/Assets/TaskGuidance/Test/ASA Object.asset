@@ -13,6 +13,11 @@ MonoBehaviour:
   m_Name: ASA Object
   m_EditorClassIdentifier: 
   annotations:
-  - {fileID: 11400000, guid: c6da894d5ba93454590fee9c8b3ccb02, type: 2}
+  - text: Test
+    offset: {x: 0.3, y: 0, z: 0}
+  - text: Test 2
+    offset: {x: -0.3, y: 0, z: 0}
+  - text: Test 3
+    offset: {x: 0, y: 0.3, z: 0}
   id: 1234
   objectType: 0
