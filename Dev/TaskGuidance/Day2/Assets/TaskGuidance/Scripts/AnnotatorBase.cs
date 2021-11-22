@@ -30,6 +30,7 @@ namespace TaskGuidance
         private GameObject objectVisual;
         #endregion // Unity Inspector Variables
 
+        #region Overrides / Event Handlers
         /// <summary>
         /// Attempts to add an annotation at the specified position.
         /// </summary>
@@ -45,7 +46,7 @@ namespace TaskGuidance
             AnnotationData annData = new AnnotationData()
             {
                 Text = "Annotation",
-                Offset = objectVisual.transform.position - position
+                Offset = position - objectVisual.transform.position
             };
 
             // Add the annoation data to the annotated object
@@ -68,6 +69,15 @@ namespace TaskGuidance
         {
 
         }
+        #endregion // Overrides / Event Handlers
+
+        #region Unity Overrides
+        protected virtual void Awake()
+        {
+            // Should not require focus
+            IsFocusRequired = false;
+        }
+        #endregion // Unity Overrides
 
         #region Overrides / Event Handlers
         protected override void RegisterHandlers()

@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a66ecd94fad47994090116a90b721862, type: 3}
-  m_Name: AnnotationData
+  m_Name: Annotation App Data
   m_EditorClassIdentifier: 
   annotatedObjects:
   - {fileID: 11400000, guid: a9f4e67b5fd63644b8e75961083ada5e, type: 2}

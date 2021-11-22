@@ -7,20 +7,15 @@ namespace TaskGuidance
     /// <summary>
     /// Creates annotations around an Azure Spatial Anchor.
     /// </summary>
-    public class ASAAnnotator : MonoBehaviour
+    public class ASAAnnotator : AnnotatorBase
     {
-        private bool isAnchorPlaced;
-
-        // Start is called before the first frame update
-        void Start()
+        protected override void TryPlaceObject(Vector3 position)
         {
+            ObjectVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            ObjectVisual.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
+            ObjectVisual.transform.position = position;
 
-        }
-
-        // Update is called once per frame
-        void Update()
-        {
-
+            IsVisualPlaced = true;
         }
     }
 }

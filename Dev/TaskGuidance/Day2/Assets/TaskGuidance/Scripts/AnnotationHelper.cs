@@ -53,11 +53,11 @@ namespace TaskGuidance
             // Give the target a name
             target.name = $"Target-{suffix}";
 
-            // Make it a child of the parent
-            target.transform.SetParent(targetParent, worldPositionStays: false);
-
             // Move the target to where it should be relative to its parent
-            target.transform.localPosition = offset;
+            target.transform.localPosition = targetParent.position + offset;
+
+            // Make it a child of the parent
+            target.transform.SetParent(targetParent, worldPositionStays: true);
 
             // Create an instance of the annotation prefab in the annotation container
             GameObject annot = GameObject.Instantiate(prefab, annotationParent);
