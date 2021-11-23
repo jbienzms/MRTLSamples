@@ -6,7 +6,7 @@ using UnityEngine;
 namespace TaskGuidance
 {
     /// <summary>
-    /// Creates annotations around an Azure Spatial Anchor.
+    /// An annotator that creates annotations around an Azure Spatial Anchor.
     /// </summary>
     public class ASAAnnotator : AnnotatorBase
     {

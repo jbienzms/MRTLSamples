@@ -6,7 +6,7 @@ using UnityEngine;
 namespace TaskGuidance
 {
     /// <summary>
-    /// Handles visualizing all annotation data in the scene.
+    /// Handles saving and loading annotations as well as interacting with annotators.
     /// </summary>
     public class AnnotationManager : MonoBehaviour
     {
