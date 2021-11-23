@@ -55,7 +55,7 @@ namespace TaskGuidance
             ObjectData.Annotations.Add(annData);
 
             // Visualize the annotation data
-            AnnotationHelper.Visualize(annotationPrefab, annotationContainer, objectVisual.transform, annData);
+            AnnotationVisualizer.Visualize(annotationPrefab, annotationContainer, objectVisual.transform, annData);
 
             // Success
             return true;
@@ -181,7 +181,7 @@ namespace TaskGuidance
             foreach (var annData in objectData.Annotations)
             {
                 // Visualize the annotation data
-                AnnotationHelper.Visualize(annotationPrefab, annotationContainer, objectVisual.transform, annData);
+                AnnotationVisualizer.Visualize(annotationPrefab, annotationContainer, objectVisual.transform, annData);
             }
         }
         #endregion // Public Methods

@@ -7,9 +7,9 @@ using UnityEngine;
 namespace TaskGuidance
 {
     /// <summary>
-    /// A helper class for creating annotations.
+    /// A helper class for visualizing annotations.
     /// </summary>
-    static public class AnnotationHelper
+    static public class AnnotationVisualizer
     {
         #region Member Variables
         static private int created = 0;
