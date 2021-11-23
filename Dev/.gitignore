@@ -25,6 +25,10 @@ MRTK/
 MRTK.meta
 Microsoft.MixedReality.Toolkit.*
 
+# Azure Spatial Anchors Key Files
+SpatialAnchorConfig.asset
+SpatialAnchorConfig.asset.meta
+
 # TextMesh Pro Package Files
 TextMesh Pro/
 TextMesh Pro.meta

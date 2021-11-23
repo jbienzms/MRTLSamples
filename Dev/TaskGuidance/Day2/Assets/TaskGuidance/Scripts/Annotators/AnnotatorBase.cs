@@ -33,53 +33,6 @@ namespace TaskGuidance
         private GameObject objectVisual;
         #endregion // Unity Inspector Variables
 
-        #region Internal Methods
-        /// <summary>
-        /// Attempts to add an annotation at the specified position.
-        /// </summary>
-        /// <param name="focus">
-        /// The focus area where the object should be placed.
-        /// </param>
-        protected virtual bool TryAddAnnotation(FocusDetails focus)
-        {
-            // Can't add an annotation if the object isn't placed
-            if (!IsVisualPlaced) { return false; }
-
-            // Create the annotation data
-            AnnotationData annData = new AnnotationData()
-            {
-                // Just basic text for now
-                Text = "Annotation",
-
-                // The world point relative to the visual gives us the offset
-                Offset = objectVisual.transform.InverseTransformPoint(focus.Point)
-            };
-
-            // Add the annoation data to the annotated object
-            ObjectData.Annotations.Add(annData);
-
-            // Visualize the annotation data
-            AnnotationVisualizer.Visualize(annotationPrefab, annotationContainer, objectVisual.transform, annData);
-
-            // Success
-            return true;
-        }
-
-        /// <summary>
-        /// Attempts to place the object at the specified position.
-        /// </summary>
-        /// <param name="focus">
-        /// The focus area where the object should be placed.
-        /// </param>
-        /// <returns>
-        /// A <see cref="Task"/> that represents the operation.
-        /// </returns>
-        protected virtual Task<bool> TryPlaceVisualAsync(FocusDetails focus)
-        {
-            return Task.FromResult(false);
-        }
-        #endregion // Internal Methods
-
         #region Overrides / Event Handlers
         protected override void RegisterHandlers()
         {
@@ -143,8 +96,38 @@ namespace TaskGuidance
         }
         #endregion // IMixedRealityPointerHandler Members
 
-
         #region Public Methods
+        /// <summary>
+        /// Attempts to add an annotation at the specified position.
+        /// </summary>
+        /// <param name="focus">
+        /// The focus area where the object should be placed.
+        /// </param>
+        public virtual bool TryAddAnnotation(FocusDetails focus)
+        {
+            // Can't add an annotation if the object isn't placed
+            if (!IsVisualPlaced) { return false; }
+
+            // Create the annotation data
+            AnnotationData annData = new AnnotationData()
+            {
+                // Just basic text for now
+                Text = "Annotation",
+
+                // The world point relative to the visual gives us the offset
+                Offset = objectVisual.transform.InverseTransformPoint(focus.Point)
+            };
+
+            // Add the annoation data to the annotated object
+            ObjectData.Annotations.Add(annData);
+
+            // Visualize the annotation data
+            AnnotationVisualizer.Visualize(annotationPrefab, annotationContainer, objectVisual.transform, annData);
+
+            // Success
+            return true;
+        }
+
         /// <summary>
         /// Attempts to load the annotated object into the scene.
         /// </summary>
@@ -152,7 +135,7 @@ namespace TaskGuidance
         /// <returns>
         /// A <see cref="Task"/> that represents the operation.
         /// </returns>
-        public Task<bool> TryLoadAsync()
+        public virtual Task<bool> TryLoadAsync()
         {
             return Task.FromResult(false);
         }
@@ -177,6 +160,20 @@ namespace TaskGuidance
 
             // Done!
             return true;
+        }
+
+        /// <summary>
+        /// Attempts to place the object at the specified position.
+        /// </summary>
+        /// <param name="focus">
+        /// The focus area where the object should be placed.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Task"/> that represents the operation.
+        /// </returns>
+        public virtual Task<bool> TryPlaceVisualAsync(FocusDetails focus)
+        {
+            return Task.FromResult(false);
         }
 
         /// <summary>
