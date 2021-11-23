@@ -1,8 +1,10 @@
 using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TaskGuidance
@@ -10,7 +12,7 @@ namespace TaskGuidance
     /// <summary>
     /// Base class for a manager that performs annotations.
     /// </summary>
-    public class AnnotatorBase : BaseInputHandler, IMixedRealityPointerHandler
+    public class AnnotatorBase : InputSystemGlobalHandlerListener, IMixedRealityPointerHandler
     {
         #region Unity Inspector Variables
         [Tooltip("The container where annotations visuals will be created in the scene.")]
@@ -65,19 +67,14 @@ namespace TaskGuidance
         /// <param name="position">
         /// The position where the object should be placed.
         /// </param>
-        protected virtual void TryPlaceObject(Vector3 position)
+        /// <returns>
+        /// A <see cref="Task"/> that represents the operation.
+        /// </returns>
+        protected virtual Task<bool> TryPlaceVisualAsync(Vector3 position)
         {
-
+            return Task.FromResult(false);
         }
         #endregion // Overrides / Event Handlers
-
-        #region Unity Overrides
-        protected virtual void Awake()
-        {
-            // Should not require focus
-            IsFocusRequired = false;
-        }
-        #endregion // Unity Overrides
 
         #region Overrides / Event Handlers
         protected override void RegisterHandlers()
@@ -90,7 +87,6 @@ namespace TaskGuidance
             CoreServices.InputSystem?.UnregisterHandler<IMixedRealityPointerHandler>(this);
         }
         #endregion // Overrides / Event Handlers
-
 
         #region IMixedRealityPointerHandler Members
         void IMixedRealityPointerHandler.OnPointerDown(MixedRealityPointerEventData eventData)
@@ -108,7 +104,7 @@ namespace TaskGuidance
 
         }
 
-        void IMixedRealityPointerHandler.OnPointerClicked(MixedRealityPointerEventData eventData)
+        async void IMixedRealityPointerHandler.OnPointerClicked(MixedRealityPointerEventData eventData)
         {
             // See if we have a point where the click happened
             Vector3? point = eventData?.Pointer?.Result?.Details.Point;
@@ -116,17 +112,79 @@ namespace TaskGuidance
             // If we have a point, try to place or add an annotation
             if (point != null)
             {
+                // Is our visual placed (or located)?
                 if (!IsVisualPlaced)
                 {
-                    TryPlaceObject(point.Value);
+                    // No. Try and place it.
+                    await TryPlaceVisualAsync(point.Value);
+
+                    // If placed, visualize
+                    if (IsVisualPlaced)
+                    {
+                        Visualize();
+                    }
                 }
                 else
                 {
+                    // Yes, already placed. Just add another annotation.
                     TryAddAnnotation(point.Value);
                 }
             }
         }
         #endregion // IMixedRealityPointerHandler Members
+
+
+        #region Public Methods
+        /// <summary>
+        /// Attempts to load the annotated object into the scene.
+        /// </summary>
+        /// <returns>
+        /// <returns>
+        /// A <see cref="Task"/> that represents the operation.
+        /// </returns>
+        public Task<bool> TryLoadAsync()
+        {
+            return Task.FromResult(false);
+        }
+
+        /// <summary>
+        /// Attempts to load the annotated object into the scene.
+        /// </summary>
+        /// <returns>
+        /// <returns>
+        /// A <see cref="Task"/> that represents the operation.
+        /// </returns>
+        public async Task<bool> TryLoadAndVisualizeAsync()
+        {
+            // Wait for load
+            bool loaded = await TryLoadAsync();
+
+            // If not loaded, nothing else to do
+            if (!loaded) { return false; }
+
+            // Visualize
+            Visualize();
+
+            // Done!
+            return true;
+        }
+
+        /// <summary>
+        /// Visualzies all of the annotations for the object.
+        /// </summary>
+        public virtual void Visualize()
+        {
+            if (objectData == null) { throw new InvalidOperationException($"Attempted to call {nameof(Visualize)} but no object data."); }
+            if (!IsVisualPlaced) { throw new InvalidOperationException($"Attempted to call {nameof(Visualize)} but visual has not been placed."); }
+
+            // Render each annotation
+            foreach (var annData in objectData.Annotations)
+            {
+                // Visualize the annotation data
+                AnnotationHelper.Visualize(annotationPrefab, annotationContainer, objectVisual.transform, annData);
+            }
+        }
+        #endregion // Public Methods
 
         #region Public Properties
         /// <summary>

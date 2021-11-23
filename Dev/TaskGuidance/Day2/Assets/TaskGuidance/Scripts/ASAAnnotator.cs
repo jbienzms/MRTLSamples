@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TaskGuidance
@@ -9,13 +10,14 @@ namespace TaskGuidance
     /// </summary>
     public class ASAAnnotator : AnnotatorBase
     {
-        protected override void TryPlaceObject(Vector3 position)
+        protected override Task<bool> TryPlaceVisualAsync(Vector3 position)
         {
             ObjectVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             ObjectVisual.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
             ObjectVisual.transform.position = position;
 
             IsVisualPlaced = true;
+            return Task.FromResult(true);
         }
     }
 }

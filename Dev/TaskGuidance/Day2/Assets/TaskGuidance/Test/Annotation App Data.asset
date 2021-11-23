@@ -13,4 +13,12 @@ MonoBehaviour:
   m_Name: Annotation App Data
   m_EditorClassIdentifier: 
   annotatedObjects:
-  - {fileID: 11400000, guid: a9f4e67b5fd63644b8e75961083ada5e, type: 2}
+  - annotations:
+    - text: Left
+      offset: {x: -0.15, y: 0, z: 0}
+    - text: Right
+      offset: {x: 0.15, y: 0, z: 0}
+    - text: Top
+      offset: {x: 0, y: 0.15, z: 0}
+    id: ASA
+    objectType: 0

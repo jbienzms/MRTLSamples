@@ -729,10 +729,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e775b253ef7af54a80a47357ab8f774, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  FakeRoot: {fileID: 851589916}
-  annotationContainer: {fileID: 754840195}
-  annotationPrefab: {fileID: 1083549605185280, guid: afaef0108a478c44a9eac26658bc29bf, type: 3}
   appData: {fileID: 11400000, guid: 7137dfc680494c042b484a528994094f, type: 2}
+  asaAnnotator: {fileID: 2111048455}
 --- !u!4 &2111048454
 Transform:
   m_ObjectHideFlags: 0
@@ -754,13 +752,15 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2111048452}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ec823a26ea446b84a97f8b4db210e839, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isFocusRequired: 0
   annotationContainer: {fileID: 754840195}
   annotationPrefab: {fileID: 1083549605185280, guid: afaef0108a478c44a9eac26658bc29bf, type: 3}
-  objectData: {fileID: 11400000, guid: a9f4e67b5fd63644b8e75961083ada5e, type: 2}
+  objectData:
+    annotations: []
+    id: 
+    objectType: 0
   objectVisual: {fileID: 0}

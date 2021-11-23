@@ -20,7 +20,7 @@ namespace TaskGuidance
         /// Creates a visual representation of an annotation.
         /// </summary>
         /// <param name="prefab">
-        /// The prefab that will be used to represent the annotation. This prefab must include a <see cref="ToolTipConnector"/>.
+        /// The prefab that will be used to represent the annotation. This prefab must include <see cref="ToolTip"/> and <see cref="ToolTipConnector"/>.
         /// </param>
         /// <param name="annotationParent">
         /// The container where the annotation will be created.
@@ -65,13 +65,19 @@ namespace TaskGuidance
             // Give it a name
             annot.name = $"Annotation-{suffix}";
 
-            // Find the tooltip connector
+            // Find components
+            ToolTip toolTip = annot.GetComponentInChildren<ToolTip>();
             ToolTipConnector connector = annot.GetComponentInChildren<ToolTipConnector>();
+            if (toolTip == null) { throw new InvalidOperationException($"{nameof(prefab)} doesn't incldue a {nameof(ToolTip)}."); }
             if (connector == null) { throw new InvalidOperationException($"{nameof(prefab)} doesn't incldue a {nameof(ToolTipConnector)}."); }
+
+            // Configure the tooltip
+            toolTip.ToolTipText = text;
 
             // Configure the tooltip connector
             connector.ConnectorFollowingType = ConnectorFollowType.PositionAndYRotation;
             connector.Target = target;
+
 
             // Return the newly created annotation
             return annot;
@@ -81,7 +87,7 @@ namespace TaskGuidance
         /// Creates a visual representation of the specified annotation.
         /// </summary>
         /// <param name="prefab">
-        /// The prefab that will be used to represent the annotation. This prefab must include a <see cref="ToolTipConnector"/>.
+        /// The prefab that will be used to represent the annotation. This prefab must include <see cref="ToolTip"/> and <see cref="ToolTipConnector"/>.
         /// </param>
         /// <param name="annotationParent">
         /// The container where the annotation will be created.

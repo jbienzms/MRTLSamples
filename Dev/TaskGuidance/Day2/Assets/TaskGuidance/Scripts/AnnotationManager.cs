@@ -11,26 +11,20 @@ namespace TaskGuidance
     public class AnnotationManager : MonoBehaviour
     {
         #region Member Variables
-        public GameObject FakeRoot;
-
-        [Tooltip("The container where annotation visuals will be created.")]
-        [SerializeField]
-        private Transform annotationContainer;
-
-        [Tooltip("The prefab that will be used to represent an annotation.")]
-        [SerializeField]
-        private GameObject annotationPrefab;
-
         [Tooltip("The app data that should be visualized.")]
         [SerializeField]
         private AnnotationAppData appData;
+
+        [Tooltip("The annotator for ASA.")]
+        [SerializeField]
+        private ASAAnnotator asaAnnotator;
         #endregion // Member Variables
 
         #region Member Variables
         /// <summary>
         /// Visualizes all of the annotations stored in the <see cref="AppData"/> property.
         /// </summary>
-        private void VisualizeAnnotations()
+        private void LoadData()
         {
             // Make sure we have data
             if ((appData == null) || (appData.AnnotatedObjects == null) || (appData.AnnotatedObjects.Count < 1))
@@ -40,53 +34,30 @@ namespace TaskGuidance
             }
 
             // Visualize
-            foreach (var ao in appData.AnnotatedObjects)
+            foreach (var annotatedObject in appData.AnnotatedObjects)
             {
-                // What type of object
-                switch (ao.ObjectType)
+                // Which annotator should we use?
+                AnnotatorBase annotator = null;
+
+                // Get the annotator for the type of object
+                switch (annotatedObject.ObjectType)
                 {
                     // It's an azure spatial anchor
                     case AnnotatedObjectType.AzureSpatialAnchor:
-                        VisualizeASA(ao);
+                        annotator = asaAnnotator;
                         break;
+
                     default:
-                        Debug.LogError($"{nameof(AnnotationManager)}: Unknown object type '{ao.ObjectType}'.");
-                        break;
+                        Debug.LogError($"{nameof(AnnotationManager)}: Unknown object type '{annotatedObject.ObjectType}'.");
+                        continue;
                 }
+
+                // Set the data
+                annotator.ObjectData = annotatedObject;
+
+                // Attempt to load and visualize (it's OK if it fails)
+                var t = annotator.TryLoadAndVisualizeAsync();
             }
-        }
-
-        /// <summary>
-        /// Visualizes the annotations relative to the specified parent.
-        /// </summary>
-        /// <param name="annotations">
-        /// The annotations to visualize.
-        /// </param>
-        /// <param name="targetParent">
-        /// The parent of the annotations.
-        /// </param>
-        private void VisualizeAnnotations(List<AnnotationData> annotations, Transform targetParent)
-        {
-            // Render each annotation
-            foreach (var annData in annotations)
-            {
-                // Visualize the annotation data
-                AnnotationHelper.Visualize(annotationPrefab, annotationContainer, targetParent, annData);
-            }
-        }
-
-        /// <summary>
-        /// Visualizes all of the annotations on an Azure Spatial Anchor.
-        /// </summary>
-        /// <param name="obj">
-        /// The <see cref="AnnotatedObjectData"/> that represents the Azure Spatial Anchor.
-        /// </param>
-        private void VisualizeASA(AnnotatedObjectData obj)
-        {
-            // TODO: Load the Azure Spatial Achor
-
-            // Visualize
-            VisualizeAnnotations(obj.Annotations, FakeRoot.transform);
         }
         #endregion // Member Variables
 
@@ -94,34 +65,20 @@ namespace TaskGuidance
         // Start is called before the first frame update
         protected virtual void Start()
         {
-            VisualizeAnnotations();
-        }
-
-        // Update is called once per frame
-        protected virtual void Update()
-        {
-
+            LoadData();
         }
         #endregion // Unity Overrides
 
         #region Public Properties
         /// <summary>
-        /// Gets or sets the parent where annotations will be created.
-        /// </summary>
-        public Transform AnnotationContainer { get => annotationContainer; set => annotationContainer = value; }
-
-        /// <summary>
-        /// Gets or sets the prefab that will be used to represent an annotation.
-        /// </summary>
-        /// <remarks>
-        /// The prefab must contain a <see cref="ToolTipConnector"/>
-        /// </remarks>
-        public GameObject AnnotationPrefab { get => annotationPrefab; set => annotationPrefab = value; }
-
-        /// <summary>
         /// Gets or sets the app data that should be visualized.
         /// </summary>
         public AnnotationAppData AppData { get => appData; set => appData = value; }
+
+        /// <summary>
+        /// Gets or sets the annotator for ASA.
+        /// </summary>
+        public ASAAnnotator ASAAnnotator { get => asaAnnotator; set => asaAnnotator = value; }
         #endregion // Public Properties
     }
 }
