@@ -110,32 +110,34 @@ namespace TaskGuidance
 
         async void IMixedRealityPointerHandler.OnPointerClicked(MixedRealityPointerEventData eventData)
         {
-            // See if we have a point where the click happened
-            FocusDetails? focus = eventData?.Pointer?.Result?.Details;
+            // Make sure we have focus details
+            if (eventData?.Pointer?.Result?.Details == null) { return; }
 
-            // If we have a point, try to place or add an annotation
-            if (focus != null)
+            // Get the details of the pointer click
+            FocusDetails focus = eventData.Pointer.Result.Details;
+
+            // If there is no focused object under the pointer (including the surface mesh) then ignore
+            if (focus.Object == null) { return; }
+
+            // Is our visual placed (or located)?
+            if (!IsVisualPlaced)
             {
-                // Is our visual placed (or located)?
-                if (!IsVisualPlaced)
-                {
-                    // No. Try and place it.
-                    await TryPlaceVisualAsync(focus.Value);
+                // No. Try and place it.
+                await TryPlaceVisualAsync(focus);
 
-                    // If placed, visualize
-                    if (IsVisualPlaced)
-                    {
-                        Visualize();
-                    }
-                }
-                else
+                // If placed, visualize
+                if (IsVisualPlaced)
                 {
-                    // Yes, already placed. Try to add another annotation.
-                    if (TryAddAnnotation(focus.Value))
-                    {
-                        // Notify that an annotation was added.
-                        AnnotationAdded?.Invoke(this, EventArgs.Empty);
-                    }
+                    Visualize();
+                }
+            }
+            else
+            {
+                // Yes, already placed. Try to add another annotation.
+                if (TryAddAnnotation(focus))
+                {
+                    // Notify that an annotation was added.
+                    AnnotationAdded?.Invoke(this, EventArgs.Empty);
                 }
             }
         }
