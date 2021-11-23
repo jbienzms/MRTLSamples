@@ -1,5 +1,6 @@
 using Microsoft.MixedReality.Toolkit;
 using Microsoft.MixedReality.Toolkit.Input;
+using Microsoft.MixedReality.Toolkit.Physics;
 using Microsoft.MixedReality.Toolkit.UI;
 using System;
 using System.Collections;
@@ -36,10 +37,10 @@ namespace TaskGuidance
         /// <summary>
         /// Attempts to add an annotation at the specified position.
         /// </summary>
-        /// <param name="position">
-        /// The position where the annotation should be created.
+        /// <param name="focus">
+        /// The focus area where the object should be placed.
         /// </param>
-        protected virtual bool TryAddAnnotation(Vector3 position)
+        protected virtual bool TryAddAnnotation(FocusDetails focus)
         {
             // Can't add an annotation if the object isn't placed
             if (!IsVisualPlaced) { return false; }
@@ -47,8 +48,11 @@ namespace TaskGuidance
             // Create the annotation data
             AnnotationData annData = new AnnotationData()
             {
+                // Just basic text for now
                 Text = "Annotation",
-                Offset = position - objectVisual.transform.position
+
+                // The world point relative to the visual gives us the offset
+                Offset = objectVisual.transform.InverseTransformPoint(focus.Point)
             };
 
             // Add the annoation data to the annotated object
@@ -64,13 +68,13 @@ namespace TaskGuidance
         /// <summary>
         /// Attempts to place the object at the specified position.
         /// </summary>
-        /// <param name="position">
-        /// The position where the object should be placed.
+        /// <param name="focus">
+        /// The focus area where the object should be placed.
         /// </param>
         /// <returns>
         /// A <see cref="Task"/> that represents the operation.
         /// </returns>
-        protected virtual Task<bool> TryPlaceVisualAsync(Vector3 position)
+        protected virtual Task<bool> TryPlaceVisualAsync(FocusDetails focus)
         {
             return Task.FromResult(false);
         }
@@ -107,16 +111,16 @@ namespace TaskGuidance
         async void IMixedRealityPointerHandler.OnPointerClicked(MixedRealityPointerEventData eventData)
         {
             // See if we have a point where the click happened
-            Vector3? point = eventData?.Pointer?.Result?.Details.Point;
+            FocusDetails? focus = eventData?.Pointer?.Result?.Details;
 
             // If we have a point, try to place or add an annotation
-            if (point != null)
+            if (focus != null)
             {
                 // Is our visual placed (or located)?
                 if (!IsVisualPlaced)
                 {
                     // No. Try and place it.
-                    await TryPlaceVisualAsync(point.Value);
+                    await TryPlaceVisualAsync(focus.Value);
 
                     // If placed, visualize
                     if (IsVisualPlaced)
@@ -127,7 +131,7 @@ namespace TaskGuidance
                 else
                 {
                     // Yes, already placed. Try to add another annotation.
-                    if (TryAddAnnotation(point.Value))
+                    if (TryAddAnnotation(focus.Value))
                     {
                         // Notify that an annotation was added.
                         AnnotationAdded?.Invoke(this, EventArgs.Empty);
