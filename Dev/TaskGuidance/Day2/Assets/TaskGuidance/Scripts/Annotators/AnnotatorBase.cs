@@ -32,7 +32,7 @@ namespace TaskGuidance
         private GameObject objectVisual;
         #endregion // Unity Inspector Variables
 
-        #region Overrides / Event Handlers
+        #region Internal Methods
         /// <summary>
         /// Attempts to add an annotation at the specified position.
         /// </summary>
@@ -74,7 +74,7 @@ namespace TaskGuidance
         {
             return Task.FromResult(false);
         }
-        #endregion // Overrides / Event Handlers
+        #endregion // Internal Methods
 
         #region Overrides / Event Handlers
         protected override void RegisterHandlers()
@@ -126,8 +126,12 @@ namespace TaskGuidance
                 }
                 else
                 {
-                    // Yes, already placed. Just add another annotation.
-                    TryAddAnnotation(point.Value);
+                    // Yes, already placed. Try to add another annotation.
+                    if (TryAddAnnotation(point.Value))
+                    {
+                        // Notify that an annotation was added.
+                        AnnotationAdded?.Invoke(this, EventArgs.Empty);
+                    }
                 }
             }
         }
@@ -215,5 +219,12 @@ namespace TaskGuidance
         /// </summary>
         public bool IsVisualPlaced { get; protected set; }
         #endregion // Public Properties
+
+        #region Public Events
+        /// <summary>
+        /// Raised when an annotation has been added.
+        /// </summary>
+        public event EventHandler AnnotationAdded;
+        #endregion // Public Events
     }
 }

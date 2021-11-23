@@ -10,6 +10,20 @@ namespace TaskGuidance
     /// <summary>
     /// A simple helper class for loading and saving objects as JSON data locally.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// On HoloLens these files can be viewed, downloaded or deleted by going to:
+    /// Device Portal -> System -> File explorer -> LocalAppData -> YourAppName -> LocalState
+    /// For example:
+    /// Device Portal -> System -> File explorer -> LocalAppData -> TaskGuidance -> LocalState
+    /// </para>
+    /// <para>
+    /// On PC these files can be viewed, downloaded or deleted by going to:
+    /// %USERPROFILE%/AppData/LocalLow/YourCompanyName/YourAppName
+    /// For example:
+    /// %USERPROFILE%/AppData/LocalLow/DefaultCompany/TaskGuidance
+    /// </para>
+    /// </remarks>
     static public class DataStore
     {
 
