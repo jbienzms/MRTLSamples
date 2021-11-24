@@ -65,6 +65,14 @@ namespace TaskGuidance
 
         #region Internal Methods
         /// <summary>
+        /// Commits the placement of the annotator.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="Task"/> that represents the operation.
+        /// </returns>
+        protected abstract Task CommitPlacementAsync();
+
+        /// <summary>
         /// Creates the visual to represent the placement of the annotator.
         /// </summary>
         protected void InstantiatePlacemark()
@@ -113,14 +121,6 @@ namespace TaskGuidance
             OnPlaced();
             Placed?.Invoke(this, EventArgs.Empty);
         }
-
-        /// <summary>
-        /// Saves the placement of the annotator.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="Task"/> that represents the operation.
-        /// </returns>
-        protected abstract Task SavePlacementAsync();
 
         /// <summary>
         /// Starts locating the placement of the annotator.
@@ -310,10 +310,10 @@ namespace TaskGuidance
                 placemarkVisual.transform.rotation = Quaternion.LookRotation(focus.Normal, Vector3.up);
 
                 // Log
-                this.Log($"Saving placement...");
+                this.Log($"Committing placement...");
 
                 // Save the placement
-                await SavePlacementAsync();
+                await CommitPlacementAsync();
 
                 // Notify that we've been placed
                 NotifyPlaced();
@@ -355,7 +355,7 @@ namespace TaskGuidance
                 this.Log($"Starting to locate.");
 
                 // Start locating
-                return StartLocatingAsync();
+                return StartLocatingPlacementAsync();
             }
             catch (Exception ex)
             {

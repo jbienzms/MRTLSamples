@@ -21,6 +21,42 @@ namespace TaskGuidance
         #endregion // Unity Inspector Variables
 
         #region Internal Methods
+        /// <inheritdoc/>
+        protected override async Task CommitPlacementAsync()
+        {
+            // We can only do ASA things on a real device and not in the editor
+            if (Application.isEditor)
+            {
+                this.Log("Can't create ASA anchor in Unity Editor.");
+            }
+            else
+            {
+                // Log
+                this.Log("Creating a new anchor...");
+
+                // Make sure we have a valid ASA sesion
+                await EnsureASASessionAsync();
+
+                // Add a cloud native anchor to the visual
+                CloudNativeAnchor cna = PlacemarkVisual.AddComponent<CloudNativeAnchor>();
+
+                // Convert the native anchor format to cloud anchor format
+                await cna.NativeToCloud();
+
+                // Set to auto expire 1 month from now
+                cna.CloudAnchor.Expiration = DateTime.UtcNow.AddMonths(1);
+
+                // Save the anchor
+                await asaManager.CreateAnchorAsync(cna.CloudAnchor);
+
+                // Store the ID of the anchor that was created so we can load the anchor again later
+                ObjectData.Id = cna.CloudAnchor.Identifier;
+
+                // Log
+                this.Log($"Anchor created with ID '{ObjectData.Id}'.");
+            }
+        }
+
         /// <summary>
         /// Ensures that we have a valid active ASA session
         /// </summary>
@@ -54,42 +90,6 @@ namespace TaskGuidance
 
             // Notify that we're now located
             NotifyLocated();
-        }
-
-        /// <inheritdoc/>
-        protected override async Task SavePlacementAsync()
-        {
-            // We can only do ASA things on a real device and not in the editor
-            if (Application.isEditor)
-            {
-                this.Log("Can't create ASA anchor in Unity Editor.");
-            }
-            else
-            {
-                // Log
-                this.Log("Creating a new anchor...");
-
-                // Make sure we have a valid ASA sesion
-                await EnsureASASessionAsync();
-
-                // Add a cloud native anchor to the visual
-                CloudNativeAnchor cna = PlacemarkVisual.AddComponent<CloudNativeAnchor>();
-
-                // Convert the native anchor format to cloud anchor format
-                await cna.NativeToCloud();
-
-                // Set to auto expire 1 month from now
-                cna.CloudAnchor.Expiration = DateTime.UtcNow.AddMonths(1);
-
-                // Save the anchor
-                await asaManager.CreateAnchorAsync(cna.CloudAnchor);
-
-                // Store the ID of the anchor that was created so we can load the anchor again later
-                ObjectData.Id = cna.CloudAnchor.Identifier;
-
-                // Log
-                this.Log($"Anchor created with ID '{ObjectData.Id}'.");
-            }
         }
 
         /// <inheritdoc/>
