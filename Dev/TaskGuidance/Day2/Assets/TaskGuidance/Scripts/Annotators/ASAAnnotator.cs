@@ -107,6 +107,7 @@ namespace TaskGuidance
             // It's now placed
             asaState = ASAState.Located;
             IsVisualPlaced = true;
+            LoadState = AnnotatorLoadState.Loaded;
 
             // Visualize
             Visualize();
@@ -177,10 +178,17 @@ namespace TaskGuidance
         /// <inheritdoc/>
         public override async Task<bool> TryLoadAsync()
         {
+            // Don't try to load more than once
+            if (LoadState != AnnotatorLoadState.NotLoaded)
+            {
+                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to load but load state is {LoadState}.");
+                return false;
+            }
+
             // We can only try to locate the anchor if it isn't already placed or being located
             if (asaState != ASAState.NotPlaced)
             {
-                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to load but state is {asaState}.");
+                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to load but ASA state is {asaState}.");
                 return false;
             }
 
@@ -194,14 +202,17 @@ namespace TaskGuidance
                 return false;
             }
 
+            // We're now loading
+            LoadState = AnnotatorLoadState.Loading;
+
+            // Change our internal state to know that we're trying to locate the anchor
+            asaState = ASAState.Locating;
+
             // Log
             Debug.Log($"{nameof(ASAAnnotator)}: Starting a search for anchor '{ObjectData.Id}'.");
 
             // Make sure we have a valid ASA sesion
             await EnsureASASessionAsync();
-
-            // Change our internal state to know that we're trying to locate the anchor
-            asaState = ASAState.Locating;
 
             // Create a criteria that will search for the Anchor ID we care about
             AnchorLocateCriteria criteria = new AnchorLocateCriteria()
@@ -219,6 +230,13 @@ namespace TaskGuidance
         /// <inheritdoc/>
         public override async Task<bool> TryPlaceVisualAsync(FocusDetails focus)
         {
+            // Don't try to place while loading
+            if (LoadState != AnnotatorLoadState.NotLoaded)
+            {
+                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to place but load state is {LoadState}.");
+                return false;
+            }
+
             // We can only place the visual if we haven't already placed it and aren't trying to
             // locate an existing anchor
             if (asaState != ASAState.NotPlaced)
@@ -269,6 +287,7 @@ namespace TaskGuidance
             // It's now placed
             asaState = ASAState.Located;
             IsVisualPlaced = true;
+            LoadState = AnnotatorLoadState.Loaded;
             return true;
         }
         #endregion // Public Methods

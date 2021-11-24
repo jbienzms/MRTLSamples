@@ -11,6 +11,27 @@ using UnityEngine;
 namespace TaskGuidance
 {
     /// <summary>
+    /// The state of the annotator loading.
+    /// </summary>
+    public enum AnnotatorLoadState
+    {
+        /// <summary>
+        /// The annotator has not loaded the object to annotate.
+        /// </summary>
+        NotLoaded,
+
+        /// <summary>
+        /// The annotator is loading the object to annotate.
+        /// </summary>
+        Loading,
+
+        /// <summary>
+        /// The annotator has loaded the object to annotate.
+        /// </summary>
+        Loaded
+    };
+
+    /// <summary>
     /// Base class for a manager that performs annotations.
     /// </summary>
     public class AnnotatorBase : InputSystemGlobalHandlerListener, IMixedRealityPointerHandler
@@ -222,6 +243,11 @@ namespace TaskGuidance
         /// Gets or sets the visual representation of the object being annotated.
         /// </summary>
         public GameObject ObjectVisual { get => objectVisual; set => objectVisual = value; }
+
+        /// <summary>
+        /// Gets a value that indicates if the object has been loaded.
+        /// </summary>
+        public AnnotatorLoadState LoadState { get; protected set; }
 
         /// <summary>
         /// Gets a value that indicates if the visual representing the object has been placed.

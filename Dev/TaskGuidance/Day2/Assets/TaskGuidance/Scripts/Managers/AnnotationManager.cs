@@ -73,7 +73,10 @@ namespace TaskGuidance
                 annotator.ObjectData = annotatedObject;
 
                 // Attempt to load and visualize (it's OK if it fails)
-                var t = annotator.TryLoadAndVisualizeAsync();
+                if ((annotator.enabled) && (annotator.LoadState == AnnotatorLoadState.NotLoaded))
+                {
+                    var t = annotator.TryLoadAndVisualizeAsync();
+                }
             }
         }
 
