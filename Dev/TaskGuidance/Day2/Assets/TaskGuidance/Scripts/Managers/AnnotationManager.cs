@@ -2,6 +2,7 @@ using Microsoft.MixedReality.Toolkit.UI;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace TaskGuidance
 {
@@ -11,6 +12,10 @@ namespace TaskGuidance
     public class AnnotationManager : MonoBehaviour
     {
         #region Member Variables
+        private bool dataLoaded;
+        #endregion // Member Variables
+
+        #region Unity Inspector Variables
         [Tooltip("The app data that should be visualized.")]
         [SerializeField]
         private AnnotationAppData appData;
@@ -18,7 +23,7 @@ namespace TaskGuidance
         [Tooltip("The annotator for ASA.")]
         [SerializeField]
         private ASAAnnotator asaAnnotator;
-        #endregion // Member Variables
+        #endregion // Unity Inspector Variables
 
         #region Internal Methods
         /// <summary>
@@ -116,7 +121,7 @@ namespace TaskGuidance
         // Start is called before the first frame update
         protected virtual void Start()
         {
-            LoadData();
+
         }
 
         protected virtual void OnEnable()
@@ -127,6 +132,17 @@ namespace TaskGuidance
         protected virtual void OnDisable()
         {
             UnsubscribeEvents();
+        }
+
+        protected virtual void Update()
+        {
+            // HACK: Wait until the first frame to load data
+            // This gives AR Foundation time to start
+            if (!dataLoaded)
+            {
+                dataLoaded = true;
+                LoadData();
+            }
         }
         #endregion // Unity Overrides
 

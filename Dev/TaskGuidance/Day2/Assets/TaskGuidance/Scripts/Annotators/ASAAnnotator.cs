@@ -1,6 +1,7 @@
 using Microsoft.Azure.SpatialAnchors;
 using Microsoft.Azure.SpatialAnchors.Unity;
 using Microsoft.MixedReality.Toolkit.Physics;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -106,6 +107,9 @@ namespace TaskGuidance
             // It's now placed
             asaState = ASAState.Located;
             IsVisualPlaced = true;
+
+            // Visualize
+            Visualize();
         }
         #endregion // Internal Methods
 
@@ -190,6 +194,9 @@ namespace TaskGuidance
                 return false;
             }
 
+            // Log
+            Debug.Log($"{nameof(ASAAnnotator)}: Starting a search for anchor '{ObjectData.Id}'.");
+
             // Make sure we have a valid ASA sesion
             await EnsureASASessionAsync();
 
@@ -201,9 +208,6 @@ namespace TaskGuidance
             {
                 Identifiers = new string[] { ObjectData.Id }
             };
-
-            // Log
-            Debug.Log($"{nameof(ASAAnnotator)}: Starting a search for anchor '{ObjectData.Id}'.");
 
             // Start a watcher to locate the criteria above
             asaManager.Session.CreateWatcher(criteria);
@@ -237,6 +241,9 @@ namespace TaskGuidance
             }
             else
             {
+                // Log
+                Debug.Log($"{nameof(ASAAnnotator)}: Creating a new anchor...");
+
                 // Make sure we have a valid ASA sesion
                 await EnsureASASessionAsync();
 
@@ -246,8 +253,8 @@ namespace TaskGuidance
                 // Convert the native anchor format to cloud anchor format
                 await cna.NativeToCloud();
 
-                // Log
-                Debug.Log($"{nameof(ASAAnnotator)}: Creating a new anchor...");
+                // Set to auto expire 1 month from now
+                cna.CloudAnchor.Expiration = DateTime.UtcNow.AddMonths(1);
 
                 // Save the anchor
                 await asaManager.CreateAnchorAsync(cna.CloudAnchor);
