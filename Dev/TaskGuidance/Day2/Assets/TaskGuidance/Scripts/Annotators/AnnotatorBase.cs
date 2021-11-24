@@ -108,14 +108,20 @@ namespace TaskGuidance
             // Can't add an annotation if the object isn't placed
             if (!IsVisualPlaced) { return false; }
 
+            // Calculate the world rotation of the nomral
+            Quaternion focusRot = Quaternion.LookRotation(focus.Normal);
+
             // Create the annotation data
             AnnotationData annData = new AnnotationData()
             {
                 // Just basic text for now
                 Text = "Annotation",
 
-                // The world point relative to the visual gives us the offset
-                Offset = objectVisual.transform.InverseTransformPoint(focus.Point)
+                // The focus point relative to the visual gives us the offset
+                Offset = objectVisual.transform.InverseTransformPoint(focus.Point),
+
+                // Calculate the offset from visual forward to the focus forward
+                Direction = Quaternion.Inverse(objectVisual.transform.rotation) * focusRot
             };
 
             // Add the annoation data to the annotated object

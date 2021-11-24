@@ -34,10 +34,13 @@ namespace TaskGuidance
         /// <param name="offset">
         /// The local offset within <paramref name="targetParent"/> where the target will be placed.
         /// </param>
+        /// <param name="direction">
+        /// The local direction within <paramref name="targetParent"/> where the target will be orientated.
+        /// </param>
         /// <returns>
         /// The created <see cref="GameObject"/> that represents the annotation.
         /// </returns>
-        static private GameObject Visualize(GameObject prefab, Transform annotationParent, Transform targetParent, string text, Vector3 offset)
+        static private GameObject Visualize(GameObject prefab, Transform annotationParent, Transform targetParent, string text, Vector3 offset, Quaternion direction)
         {
             // Validate parameters
             if (prefab == null) throw new ArgumentNullException(nameof(prefab));
@@ -58,6 +61,7 @@ namespace TaskGuidance
 
             // Move the target to where it should be relative to its parent
             target.transform.localPosition = offset;
+            target.transform.localRotation = direction;
 
             // Create an instance of the annotation prefab in the annotation container
             GameObject annot = GameObject.Instantiate(prefab, annotationParent);
@@ -75,9 +79,7 @@ namespace TaskGuidance
             toolTip.ToolTipText = text;
 
             // Configure the tooltip connector
-            connector.ConnectorFollowingType = ConnectorFollowType.PositionAndYRotation;
             connector.Target = target;
-
 
             // Return the newly created annotation
             return annot;
@@ -107,7 +109,7 @@ namespace TaskGuidance
             if (prefab == null) throw new ArgumentNullException(nameof(annotation));
 
             // Use other version
-            return Visualize(prefab, annotationParent, targetParent, annotation.Text, annotation.Offset);
+            return Visualize(prefab, annotationParent, targetParent, annotation.Text, annotation.Offset, annotation.Direction);
         }
         #endregion // Public Methods
     }

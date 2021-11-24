@@ -232,7 +232,7 @@ namespace TaskGuidance
 
             // Move the visual to where the user tapped and orientate it correctly
             ObjectVisual.transform.position = focus.Point;
-            ObjectVisual.transform.rotation = Quaternion.LookRotation(focus.Normal * -1f, Vector3.up);
+            ObjectVisual.transform.rotation = Quaternion.LookRotation(focus.Normal, Vector3.up);
 
             // We can only do ASA things on a real device and not in the editor
             if (Application.isEditor)
