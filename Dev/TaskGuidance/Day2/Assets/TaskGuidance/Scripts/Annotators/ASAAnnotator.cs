@@ -14,37 +14,7 @@ namespace TaskGuidance
     /// </summary>
     public class ASAAnnotator : AnnotatorBase
     {
-        #region Nested Types
-        /// <summary>
-        /// The differnet states for ASA in this annotator.
-        /// </summary>
-        private enum ASAState
-        {
-            /// <summary>
-            /// The ASA anchor hasn't been placed.
-            /// </summary>
-            NotPlaced,
-            /// <summary>
-            /// The ASA anchor is being located.
-            /// </summary>
-            Locating,
-
-            /// <summary>
-            /// The ASA anchor has been located.
-            /// </summary>
-            Located
-        }
-        #endregion // Nested Types
-
-        #region Member Variables
-        private ASAState asaState;
-        #endregion // Member Variables
-
         #region Unity Inspector Variables
-        [Tooltip("The prefab that will be used to represent the center of the ASA Anchor.")]
-        [SerializeField]
-        private GameObject anchorPrefab;
-
         [Tooltip("The ASA manager that will create and locate anchors.")]
         [SerializeField]
         private SpatialAnchorManager asaManager;
@@ -59,35 +29,13 @@ namespace TaskGuidance
             // If an ASA session hasn't been started yet, start one now
             if (!asaManager.IsSessionStarted)
             {
-                Debug.Log($"{nameof(ASAAnnotator)}: Starting a new ASA session...");
+                this.Log("Starting a new ASA session...");
                 await asaManager.StartSessionAsync();
             }
         }
 
         /// <summary>
-        /// Creates a visual to represent the center of the anchor.
-        /// </summary>
-        /// <returns>
-        /// The visual.
-        /// </returns>
-        private void InstantiateVisual()
-        {
-            // Create the visual to represent the center of the anchor
-            if (anchorPrefab != null)
-            {
-                // Use the prefab
-                ObjectVisual = GameObject.Instantiate(anchorPrefab);
-            }
-            else
-            {
-                // Create a small sphere to represent
-                ObjectVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                ObjectVisual.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
-            }
-        }
-
-        /// <summary>
-        /// Attaches the specified anchor to our visual, moving the visual to the correct location.
+        /// Attaches the located anchor to our placemark, moving the placemark to the correct location.
         /// </summary>
         /// <param name="anchor">
         /// The anchor to apply
@@ -95,22 +43,72 @@ namespace TaskGuidance
         private void AttachLocatedAnchor(CloudSpatialAnchor anchor)
         {
             // Make sure we have a visual
-            if (ObjectVisual == null) { InstantiateVisual(); }
+            if (PlacemarkVisual == null) { InstantiatePlacemark(); }
 
             // Add a cloud native anchor to the visual
-            CloudNativeAnchor cna = ObjectVisual.AddComponent<CloudNativeAnchor>();
+            CloudNativeAnchor cna = PlacemarkVisual.AddComponent<CloudNativeAnchor>();
 
             // Convert the cloud anchor format to the native anchor format, which moves the visual
             // to the right location
             cna.CloudToNative(anchor);
 
-            // It's now placed
-            asaState = ASAState.Located;
-            IsVisualPlaced = true;
-            LoadState = AnnotatorLoadState.Loaded;
+            // Notify that we're now located
+            NotifyLocated();
+        }
 
-            // Visualize
-            Visualize();
+        /// <inheritdoc/>
+        protected override async Task SavePlacementAsync()
+        {
+            // We can only do ASA things on a real device and not in the editor
+            if (Application.isEditor)
+            {
+                this.Log("Can't create ASA anchor in Unity Editor.");
+            }
+            else
+            {
+                // Log
+                this.Log("Creating a new anchor...");
+
+                // Make sure we have a valid ASA sesion
+                await EnsureASASessionAsync();
+
+                // Add a cloud native anchor to the visual
+                CloudNativeAnchor cna = PlacemarkVisual.AddComponent<CloudNativeAnchor>();
+
+                // Convert the native anchor format to cloud anchor format
+                await cna.NativeToCloud();
+
+                // Set to auto expire 1 month from now
+                cna.CloudAnchor.Expiration = DateTime.UtcNow.AddMonths(1);
+
+                // Save the anchor
+                await asaManager.CreateAnchorAsync(cna.CloudAnchor);
+
+                // Store the ID of the anchor that was created so we can load the anchor again later
+                ObjectData.Id = cna.CloudAnchor.Identifier;
+
+                // Log
+                this.Log($"Anchor created with ID '{ObjectData.Id}'.");
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override async Task StartLocatingPlacementAsync()
+        {
+            // Log
+            this.Log($"Starting a search for anchor '{ObjectData.Id}'.");
+
+            // Make sure we have a valid ASA sesion
+            await EnsureASASessionAsync();
+
+            // Create a criteria that will search for the Anchor ID we care about
+            AnchorLocateCriteria criteria = new AnchorLocateCriteria()
+            {
+                Identifiers = new string[] { ObjectData.Id }
+            };
+
+            // Start a watcher to locate the criteria above
+            asaManager.Session.CreateWatcher(criteria);
         }
         #endregion // Internal Methods
 
@@ -124,7 +122,7 @@ namespace TaskGuidance
                 if (args.Identifier == ObjectData.Id)
                 {
                     // Log
-                    Debug.Log($"{nameof(ASAAnnotator)}: Anchor located: '{args.Identifier}'.");
+                    this.Log($"Anchor located '{args.Identifier}'.");
 
                     // Attach the anchor, but use the UI thread to do it
                     UnityDispatcher.InvokeOnAppThread(()=> AttachLocatedAnchor(args.Anchor));
@@ -168,128 +166,25 @@ namespace TaskGuidance
             // Make sure we have an ASA Manager
             if (asaManager == null)
             {
-                Debug.LogError($"{nameof(ASAAnnotator)}: No ASA Manager was assigned. This annotator will be disabled.");
+                this.LogError("No ASA Manager was assigned. This annotator will be disabled.");
                 enabled = false;
             }
         }
         #endregion // Unity Overrides
 
-        #region Public Methods
+        #region Public Properties
         /// <inheritdoc/>
-        public override async Task<bool> TryLoadAsync()
+        public override bool CanLocate
         {
-            // Don't try to load more than once
-            if (LoadState != AnnotatorLoadState.NotLoaded)
+            get
             {
-                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to load but load state is {LoadState}.");
-                return false;
+                // If base says no, then no
+                if (!base.CanLocate) { return false; }
+
+                // ASA can't locate in the Unity editor
+                return (!Application.isEditor);
             }
-
-            // We can only try to locate the anchor if it isn't already placed or being located
-            if (asaState != ASAState.NotPlaced)
-            {
-                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to load but ASA state is {asaState}.");
-                return false;
-            }
-
-            // If we don't have an anchor ID to load, there's nothing to do
-            if (string.IsNullOrEmpty(ObjectData.Id)) { return false; }
-
-            // If we're running in the Unity Editor, ASA functions won't work
-            if (Application.isEditor)
-            {
-                Debug.Log($"{nameof(ASAAnnotator)}: Can't load ASA data in Unity Editor.");
-                return false;
-            }
-
-            // We're now loading
-            LoadState = AnnotatorLoadState.Loading;
-
-            // Change our internal state to know that we're trying to locate the anchor
-            asaState = ASAState.Locating;
-
-            // Log
-            Debug.Log($"{nameof(ASAAnnotator)}: Starting a search for anchor '{ObjectData.Id}'.");
-
-            // Make sure we have a valid ASA sesion
-            await EnsureASASessionAsync();
-
-            // Create a criteria that will search for the Anchor ID we care about
-            AnchorLocateCriteria criteria = new AnchorLocateCriteria()
-            {
-                Identifiers = new string[] { ObjectData.Id }
-            };
-
-            // Start a watcher to locate the criteria above
-            asaManager.Session.CreateWatcher(criteria);
-
-            // Loading
-            return true;
         }
-
-        /// <inheritdoc/>
-        public override async Task<bool> TryPlaceVisualAsync(FocusDetails focus)
-        {
-            // Don't try to place while loading
-            if (LoadState != AnnotatorLoadState.NotLoaded)
-            {
-                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to place but load state is {LoadState}.");
-                return false;
-            }
-
-            // We can only place the visual if we haven't already placed it and aren't trying to
-            // locate an existing anchor
-            if (asaState != ASAState.NotPlaced)
-            {
-                Debug.LogWarning($"{nameof(ASAAnnotator)}: Attemting to place visual but state is {asaState}.");
-                return false;
-            }
-
-            // Make sure we have a visual to place
-            if (ObjectVisual == null) { InstantiateVisual(); }
-
-            // Move the visual to where the user tapped and orientate it correctly
-            ObjectVisual.transform.position = focus.Point;
-            ObjectVisual.transform.rotation = Quaternion.LookRotation(focus.Normal, Vector3.up);
-
-            // We can only do ASA things on a real device and not in the editor
-            if (Application.isEditor)
-            {
-                Debug.Log($"{nameof(ASAAnnotator)}: Can't create ASA anchor in Unity Editor.");
-            }
-            else
-            {
-                // Log
-                Debug.Log($"{nameof(ASAAnnotator)}: Creating a new anchor...");
-
-                // Make sure we have a valid ASA sesion
-                await EnsureASASessionAsync();
-
-                // Add a cloud native anchor to the visual
-                CloudNativeAnchor cna = ObjectVisual.AddComponent<CloudNativeAnchor>();
-
-                // Convert the native anchor format to cloud anchor format
-                await cna.NativeToCloud();
-
-                // Set to auto expire 1 month from now
-                cna.CloudAnchor.Expiration = DateTime.UtcNow.AddMonths(1);
-
-                // Save the anchor
-                await asaManager.CreateAnchorAsync(cna.CloudAnchor);
-
-                // Store the ID of the anchor that was created so we can load the anchor again later
-                ObjectData.Id = cna.CloudAnchor.Identifier;
-
-                // Log
-                Debug.Log($"{nameof(ASAAnnotator)}: Anchor created with ID '{ObjectData.Id}'.");
-            }
-
-            // It's now placed
-            asaState = ASAState.Located;
-            IsVisualPlaced = true;
-            LoadState = AnnotatorLoadState.Loaded;
-            return true;
-        }
-        #endregion // Public Methods
+        #endregion // Public Properties
     }
 }

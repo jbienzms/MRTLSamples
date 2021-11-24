@@ -72,10 +72,11 @@ namespace TaskGuidance
                 // Set the data
                 annotator.ObjectData = annotatedObject;
 
-                // Attempt to load and visualize (it's OK if it fails)
-                if ((annotator.enabled) && (annotator.LoadState == AnnotatorLoadState.NotLoaded))
+                // If possible to locate, start locating
+                if ((annotator.enabled) && (annotator.CanLocate))
                 {
-                    var t = annotator.TryLoadAndVisualizeAsync();
+                    // Start locating, but don't wait for it to complete here
+                    var t = annotator.StartLocatingAsync();
                 }
             }
         }

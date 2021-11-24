@@ -311,7 +311,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &851589917
 Transform:
   m_ObjectHideFlags: 0
@@ -703,8 +703,7 @@ MonoBehaviour:
     annotations: []
     id: 
     objectType: 0
-  objectVisual: {fileID: 0}
-  anchorPrefab: {fileID: 4438994278670009148, guid: 9d5efcbcf02c05d4ea850f4f82f71a7f, type: 3}
+  placemarkPrefab: {fileID: 4438994278670009148, guid: 9d5efcbcf02c05d4ea850f4f82f71a7f, type: 3}
   asaManager: {fileID: 2111048455}
 --- !u!4 &1368945263
 Transform:
