@@ -698,7 +698,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   annotationContainer: {fileID: 754840195}
-  annotationPrefab: {fileID: 1083549605185280, guid: afaef0108a478c44a9eac26658bc29bf, type: 3}
+  annotationPrefab: {fileID: 6123104189284357121, guid: 0bf5b21b38427244780ef8c4ea5be0e4, type: 3}
   objectData:
     annotations: []
     id: 
@@ -762,6 +762,8 @@ GameObject:
   - component: {fileID: 2111048454}
   - component: {fileID: 2111048453}
   - component: {fileID: 2111048455}
+  - component: {fileID: 2111048457}
+  - component: {fileID: 2111048456}
   m_Layer: 0
   m_Name: Managers
   m_TagString: Untagged
@@ -817,3 +819,29 @@ MonoBehaviour:
   clientId: 
   tenantId: 
   logLevel: 5
+--- !u!114 &2111048456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111048452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 728ad7fae8e460a4ba41265c7308d757, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_AnchorPrefab: {fileID: 0}
+--- !u!114 &2111048457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2111048452}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 520bb47c46cf8624fafb307b7d1b862a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Camera: {fileID: 963194227}
