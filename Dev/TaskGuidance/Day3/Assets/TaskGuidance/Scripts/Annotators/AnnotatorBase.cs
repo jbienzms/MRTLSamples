@@ -46,25 +46,37 @@ namespace TaskGuidance
         #endregion // Member Variables
 
         #region Unity Inspector Variables
+        [Header("Containers")]
         [Tooltip("The container where annotations visuals will be created in the scene.")]
         [SerializeField]
         private Transform annotationContainer;
 
+
+        [Header("Prefabs")]
         [Tooltip("The prefab that will be used to represent an annotation.")]
         [SerializeField]
         private GameObject annotationPrefab;
 
-        [Tooltip("The layers to be ignored when placing and annotating.")]
+        [Tooltip("The prefab that will be used to represent the placement of the annotator.")]
         [SerializeField]
-        private LayerMask ignoreLayers;
+        private GameObject placemarkPrefab;
 
+
+        [Header("Layers")]
+        [Tooltip("The layers where annotations can be made.")]
+        [SerializeField]
+        private LayerMask annotateLayers;
+
+        [Tooltip("The layers where annotators can be placed.")]
+        [SerializeField]
+        private LayerMask placeLayers;
+
+
+        [Header("Data")]
         [Tooltip("The data about the object where annotations will be stored on disk.")]
         [SerializeField]
         private AnnotatedObjectData objectData;
 
-        [Tooltip("The prefab that will be used to represent the placement of the annotator.")]
-        [SerializeField]
-        private GameObject placemarkPrefab;
         #endregion // Unity Inspector Variables
 
         #region Internal Methods
@@ -143,13 +155,13 @@ namespace TaskGuidance
         private void TryPlaceOrAnnotate(FocusDetails focus)
         {
             // Try to place first
-            if (CanPlace)
+            if ((placeLayers.Contains(focus.Object.layer) && (CanPlace)))
             {
                 // Kick off the process to place, but don't wait for it to complete here
                 var t = PlaceAsync(focus);
             }
             // Next, try to annotate
-            else if (CanAnnotate)
+            else if ((annotateLayers.Contains(focus.Object.layer) && (CanAnnotate)))
             {
                 AddAnnotation(focus);
             }
@@ -244,9 +256,6 @@ namespace TaskGuidance
             // ignore the click
             if (focus.Object == null) { return; }
 
-            // If the object under the pointer is on an ignored layer, ignore the click
-            if ((ignoreLayers.value & (1 << focus.Object.layer)) > 0) { return; }
-
             // Attempt to place or annotate
             TryPlaceOrAnnotate(focus);
         }
@@ -255,10 +264,15 @@ namespace TaskGuidance
         #region Unity Overrides
         protected virtual void Awake()
         {
-            // If no layers are specified, make sure at least UI is ignored
-            if (ignoreLayers == 0)
+            // If no layers are specified, pick some intelligent defaults
+            if (placeLayers == 0)
             {
-                ignoreLayers = LayerMask.GetMask("Ignore Raycast", "UI");
+                placeLayers = LayerExtensions.ExistingLayersMask("Spatial Awareness");
+            }
+
+            if (annotateLayers == 0)
+            {
+                annotateLayers = LayerExtensions.ExistingLayersMask("Spatial Awareness", "ARR Object");
             }
         }
         #endregion // Unity Overrides

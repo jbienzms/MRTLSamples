@@ -305,7 +305,7 @@ GameObject:
   - component: {fileID: 851589919}
   - component: {fileID: 851589918}
   - component: {fileID: 851589923}
-  m_Layer: 0
+  m_Layer: 31
   m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -700,14 +700,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   annotationContainer: {fileID: 754840195}
   annotationPrefab: {fileID: 6123104189284357121, guid: 0bf5b21b38427244780ef8c4ea5be0e4, type: 3}
-  ignoreLayers:
+  placemarkPrefab: {fileID: 4438994278670009148, guid: 9d5efcbcf02c05d4ea850f4f82f71a7f, type: 3}
+  annotateLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 2147483648
+  placeLayers:
+    serializedVersion: 2
+    m_Bits: 2147483648
   objectData:
     annotations: []
     id: 
-    objectType: 0
-  placemarkPrefab: {fileID: 4438994278670009148, guid: 9d5efcbcf02c05d4ea850f4f82f71a7f, type: 3}
+    annotator: 0
   asaManager: {fileID: 2111048455}
 --- !u!4 &1368945263
 Transform:
@@ -730,21 +733,24 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1368945261}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4b790b07f02424b40b5425123355e201, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   annotationContainer: {fileID: 754840195}
   annotationPrefab: {fileID: 6123104189284357121, guid: 0bf5b21b38427244780ef8c4ea5be0e4, type: 3}
-  ignoreLayers:
+  placemarkPrefab: {fileID: 4438994278670009148, guid: 9d5efcbcf02c05d4ea850f4f82f71a7f, type: 3}
+  annotateLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
+  placeLayers:
+    serializedVersion: 2
+    m_Bits: 2147483648
   objectData:
     annotations: []
     id: 
-    objectType: 0
-  placemarkPrefab: {fileID: 4438994278670009148, guid: 9d5efcbcf02c05d4ea850f4f82f71a7f, type: 3}
+    annotator: 0
   arrManager: {fileID: 2111048458}
   modelName: builtin://Engine
 --- !u!1 &1984346865
@@ -816,6 +822,14 @@ MonoBehaviour:
     annotatedObjects: []
   arrAnnotator: {fileID: 1368945264}
   asaAnnotator: {fileID: 1368945262}
+  asaAction:
+    id: 16
+    description: Spatial Anchor Mode
+    axisConstraint: 0
+  arrAction:
+    id: 17
+    description: Remote Render Mode
+    axisConstraint: 0
 --- !u!4 &2111048454
 Transform:
   m_ObjectHideFlags: 0

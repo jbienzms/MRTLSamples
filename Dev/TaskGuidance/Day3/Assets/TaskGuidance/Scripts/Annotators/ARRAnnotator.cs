@@ -16,6 +16,7 @@ namespace TaskGuidance
     public class ARRAnnotator : AnnotatorBase
     {
         #region Member Variables
+        private int arrLayer;
         private GameObject modelRoot;
         #endregion // Member Variables
 
@@ -68,6 +69,9 @@ namespace TaskGuidance
             // Load our model and create related Unity components
             modelRoot = await arrManager.LoadModelAsync(modelName, UnityCreationMode.CreateUnityComponents);
 
+            // Put the model on the right layer
+            modelRoot.layer = arrLayer;
+
             // Add the remote bounds
             modelRoot.AddComponent<RemoteBounds>();
 
@@ -87,6 +91,9 @@ namespace TaskGuidance
         {
             // Pass on to base first
             base.Start();
+
+            // Use the ARR layer if possible
+            arrLayer = LayerExtensions.ExistingOrDefault("ARR Object", 0);
 
             // Make sure we have an ASA Manager
             if (arrManager == null)

@@ -1,3 +1,5 @@
+using Microsoft.MixedReality.Toolkit;
+using Microsoft.MixedReality.Toolkit.Input;
 using Microsoft.MixedReality.Toolkit.UI;
 using System;
 using System.Collections;
@@ -11,13 +13,14 @@ namespace TaskGuidance
     /// <summary>
     /// Handles saving and loading annotations as well as interacting with annotators.
     /// </summary>
-    public class AnnotationManager : MonoBehaviour
+    public class AnnotationManager : InputSystemGlobalHandlerListener, IMixedRealityInputActionHandler
     {
         #region Member Variables
         private bool dataLoaded;
         #endregion // Member Variables
 
         #region Unity Inspector Variables
+        [Header("Annotators")]
         [Tooltip("The app data that should be visualized.")]
         [SerializeField]
         private AnnotationAppData appData;
@@ -29,9 +32,76 @@ namespace TaskGuidance
         [Tooltip("The annotator for ASA.")]
         [SerializeField]
         private ASAAnnotator asaAnnotator;
+
+        [Header("Content")]
+        [Tooltip("The input action to switch to ASA.")]
+        [SerializeField]
+        private MixedRealityInputAction asaAction;
+
+        [Tooltip("The input action to switch to ARR.")]
+        [SerializeField]
+        private MixedRealityInputAction arrAction;
         #endregion // Unity Inspector Variables
 
         #region Internal Methods
+        /// <summary>
+        /// Activates the specified annotator.
+        /// </summary>
+        /// <param name="annotator">
+        /// The type of annotator to activate.
+        /// </param>
+        private void ActivateAnnotator(AnnotatorType annotator)
+        {
+            // Log
+            this.Log($"Switching to {annotator} annotator.");
+
+            // Placeholder
+            AnnotatorBase newAnnotator = null;
+
+            // Get the new annotator and disable the others
+            switch (annotator)
+            {
+                case AnnotatorType.AzureSpatialAnchor:
+                    newAnnotator = asaAnnotator;
+                    arrAnnotator.enabled = false;
+                    break;
+                case AnnotatorType.AzureRemoteRender:
+                    newAnnotator = arrAnnotator;
+                    asaAnnotator.enabled = false;
+                    break;
+                default:
+                    this.LogWarning($"Unknown annotator {annotator}");
+                    break;
+            }
+
+            // Enable the new annotator
+            newAnnotator.enabled = true;
+
+            // If can locate, then locate (but don't wait for it to complete)
+            if (newAnnotator.CanLocate)
+            {
+                var t = newAnnotator.StartLocatingAsync();
+            }
+        }
+
+        /// <summary>
+        /// Handles the specified input action, switching to the proper annotator.
+        /// </summary>
+        /// <param name="action">
+        /// The action to handle.
+        /// </param>
+        private void HandleInputAction(MixedRealityInputAction action)
+        {
+            if (action == asaAction)
+            {
+                ActivateAnnotator(AnnotatorType.AzureSpatialAnchor);
+            }
+            else if (action == arrAction)
+            {
+                ActivateAnnotator(AnnotatorType.AzureRemoteRender);
+            }
+        }
+
         /// <summary>
         /// Loads annotation data for each annotator from storage. If data isn't found, an empty
         /// data set will be crated.
@@ -49,15 +119,15 @@ namespace TaskGuidance
             }
 
             // Make sure we have data for each type of annotator and try to locate it
-            foreach (AnnotatedObjectType objectType in Enum.GetValues(typeof(AnnotatedObjectType)))
+            foreach (AnnotatorType objectType in Enum.GetValues(typeof(AnnotatorType)))
             {
                 // See if there's already data for the locator
-                AnnotatedObjectData data = appData.AnnotatedObjects.Where(o => o.ObjectType == objectType).FirstOrDefault();
+                AnnotatedObjectData data = appData.AnnotatedObjects.Where(o => o.Annotator == objectType).FirstOrDefault();
 
                 // If not, create and add data for this locator
                 if (data == null)
                 {
-                    data = new AnnotatedObjectData() { ObjectType = objectType };
+                    data = new AnnotatedObjectData() { Annotator = objectType };
                     appData.AnnotatedObjects.Add(data);
                 }
 
@@ -66,12 +136,12 @@ namespace TaskGuidance
                 switch (objectType)
                 {
                     // It's an azure spatial anchor
-                    case AnnotatedObjectType.AzureSpatialAnchor:
+                    case AnnotatorType.AzureSpatialAnchor:
                         annotator = asaAnnotator;
                         break;
 
                     // It's an azure spatial anchor
-                    case AnnotatedObjectType.AzureRemoteRender:
+                    case AnnotatorType.AzureRemoteRender:
                         annotator = arrAnnotator;
                         break;
 
@@ -90,6 +160,8 @@ namespace TaskGuidance
                     var t = annotator.StartLocatingAsync();
                 }
             }
+
+            Debug.Log("READY! Say 'Spatial Anchor Mode' or 'Remote Render Mode' to begin.");
         }
 
         /// <summary>
@@ -132,23 +204,41 @@ namespace TaskGuidance
             // Every time an annotation is added, save the data to storage
             SaveData();
         }
+
+        protected override void RegisterHandlers()
+        {
+            CoreServices.InputSystem?.RegisterHandler<IMixedRealityInputActionHandler>(this);
+        }
+
+        protected override void UnregisterHandlers()
+        {
+            CoreServices.InputSystem?.UnregisterHandler<IMixedRealityInputActionHandler>(this);
+        }
         #endregion // Overrides / Event Handlers
 
-        #region Unity Overrides
-        // Start is called before the first frame update
-        protected virtual void Start()
+        #region IMixedRealityInputActionHandler
+        void IMixedRealityInputActionHandler.OnActionStarted(BaseInputEventData eventData)
+        {
+            HandleInputAction(eventData.MixedRealityInputAction);
+        }
+
+        void IMixedRealityInputActionHandler.OnActionEnded(BaseInputEventData eventData)
         {
 
         }
+        #endregion // IMixedRealityInputActionHandler
 
-        protected virtual void OnEnable()
+        #region Unity Overrides
+        protected override void OnEnable()
         {
+            base.OnEnable();
             SubscribeEvents();
         }
 
-        protected virtual void OnDisable()
+        protected override void OnDisable()
         {
             UnsubscribeEvents();
+            base.OnDisable();
         }
 
         protected virtual void Update()
