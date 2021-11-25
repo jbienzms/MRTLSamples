@@ -34,11 +34,28 @@ namespace TaskGuidance
 
         #region Internal Methods
         /// <inheritdoc/>
-        protected override async Task CommitPlacementAsync()
+        protected override Task CommitPlacementAsync()
         {
             // ARR doesn't actually save the placement, but now that we're placed we can connect
             // and load our model.
 
+            // Let's do the connecting and loading in a separate task that can run in parallel.
+            // This will allow annotations to load before the Remote Rendering model has appeared.
+            // Note that this task could fail. However, we'll have log messages.
+            var t = ConnectAndLoadModelAsync();
+
+            // Done with placing
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Loads the remote rendering model.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="Task"/> that represents the operation.
+        /// </returns>
+        private async Task ConnectAndLoadModelAsync()
+        {
             // Log
             this.Log($"Connecting to ARR session...");
 
@@ -50,6 +67,12 @@ namespace TaskGuidance
 
             // Load our model and create related Unity components
             modelRoot = await arrManager.LoadModelAsync(modelName, UnityCreationMode.CreateUnityComponents);
+
+            // Add the remote bounds
+            modelRoot.AddComponent<RemoteBounds>();
+
+            // Parent it to the placemark
+            modelRoot.transform.SetParent(PlacemarkVisual.transform, worldPositionStays: false);
         }
 
         /// <inheritdoc/>

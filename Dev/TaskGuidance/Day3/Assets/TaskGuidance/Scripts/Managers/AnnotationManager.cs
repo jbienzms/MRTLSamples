@@ -1,6 +1,8 @@
 using Microsoft.MixedReality.Toolkit.UI;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -31,38 +33,37 @@ namespace TaskGuidance
 
         #region Internal Methods
         /// <summary>
-        /// Loads annotation data from storage.
+        /// Loads annotation data for each annotator from storage. If data isn't found, an empty
+        /// data set will be crated.
         /// </summary>
-        private void LoadData()
+        private void LoadOrCreateData()
         {
             // Attempt to load from storage
             AppData = DataStore.LoadObject<AnnotationAppData>("Annotations");
 
-            // Make sure we have data
-            if ((appData == null) || (appData.AnnotatedObjects == null) || (appData.AnnotatedObjects.Count < 1))
+            // If no data was loaded from storage, create a new data set
+            if ((appData == null) || (appData.AnnotatedObjects == null))
             {
-                Debug.LogWarning($"{nameof(AnnotationManager)}: No annotations loaded. Creating default data.");
                 // Create default app data
-                appData = new AnnotationAppData()
-                {
-                    // Create a list of annotated objects
-                    AnnotatedObjects = new List<AnnotatedObjectData>()
-                    {
-                        // Add one for each annotator type
-                        new AnnotatedObjectData() { ObjectType = AnnotatedObjectType.AzureSpatialAnchor},
-                        new AnnotatedObjectData() { ObjectType = AnnotatedObjectType.AzureRemoteRender}
-                    }
-                };
+                appData = new AnnotationAppData();
             }
 
-            // Visualize
-            foreach (var annotatedObject in appData.AnnotatedObjects)
+            // Make sure we have data for each type of annotator and try to locate it
+            foreach (AnnotatedObjectType objectType in Enum.GetValues(typeof(AnnotatedObjectType)))
             {
-                // Which annotator should we use?
-                AnnotatorBase annotator = null;
+                // See if there's already data for the locator
+                AnnotatedObjectData data = appData.AnnotatedObjects.Where(o => o.ObjectType == objectType).FirstOrDefault();
 
-                // Get the annotator for the type of object
-                switch (annotatedObject.ObjectType)
+                // If not, create and add data for this locator
+                if (data == null)
+                {
+                    data = new AnnotatedObjectData() { ObjectType = objectType };
+                    appData.AnnotatedObjects.Add(data);
+                }
+
+                // Now, get the annotator for the type of data
+                AnnotatorBase annotator = null;
+                switch (objectType)
                 {
                     // It's an azure spatial anchor
                     case AnnotatedObjectType.AzureSpatialAnchor:
@@ -75,17 +76,17 @@ namespace TaskGuidance
                         break;
 
                     default:
-                        Debug.LogError($"{nameof(AnnotationManager)}: Unknown object type '{annotatedObject.ObjectType}'.");
+                        Debug.LogError($"{nameof(AnnotationManager)}: Unknown object type '{objectType}'.");
                         continue;
                 }
 
-                // Set the data
-                annotator.ObjectData = annotatedObject;
+                // Send the data to the annotator
+                annotator.ObjectData = data;
 
-                // If possible to locate, start locating
+                // If possible to locate the annotator, start locating
                 if ((annotator.enabled) && (annotator.CanLocate))
                 {
-                    // Start locating, but don't wait for it to complete here
+                    // But don't wait for it to complete here
                     var t = annotator.StartLocatingAsync();
                 }
             }
@@ -109,6 +110,7 @@ namespace TaskGuidance
         private void SubscribeEvents()
         {
             asaAnnotator.AnnotationAdded += Annotator_AnnotationAdded;
+            arrAnnotator.AnnotationAdded += Annotator_AnnotationAdded;
         }
 
         /// <summary>
@@ -117,6 +119,7 @@ namespace TaskGuidance
         private void UnsubscribeEvents()
         {
             asaAnnotator.AnnotationAdded -= Annotator_AnnotationAdded;
+            arrAnnotator.AnnotationAdded -= Annotator_AnnotationAdded;
         }
         #endregion // Internal Methods
 
@@ -155,7 +158,7 @@ namespace TaskGuidance
             if (!dataLoaded)
             {
                 dataLoaded = true;
-                LoadData();
+                LoadOrCreateData();
             }
         }
         #endregion // Unity Overrides

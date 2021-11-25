@@ -23,6 +23,7 @@ public class RemoteRenderingManager : MonoBehaviour
     #region Member Variables
     private ARRServiceUnity arrService = null;
     private string sessionId = null;
+    private Task<RenderingSessionProperties> sessionTask;
     #endregion // Member Variables
 
     #region Unity Inspector Variables
@@ -68,33 +69,6 @@ public class RemoteRenderingManager : MonoBehaviour
     #endregion // Unity Inspector Variables
 
     #region Internal Methods
-    /// <summary>
-    /// Connects to a the ARR service.
-    /// </summary>
-    /// <returns>
-    /// A <see cref="Task"/> that represents the operation.
-    /// </returns>
-    private async Task ConnectAsync()
-    {
-        // Make sure the service object is initalized
-        EnsureServiceInitialized();
-
-        // Don't connect if already connected
-        if (arrService.CurrentActiveSession?.ConnectionStatus != ConnectionStatus.Disconnected)
-        {
-            return;
-        }
-
-        // Attempt to connect
-        ConnectionStatus res = await arrService.CurrentActiveSession.ConnectAsync(new RendererInitOptions());
-
-        // If not connected, fail task
-        if (!arrService.CurrentActiveSession.IsConnected)
-        {
-            throw new InvalidOperationException("ARR service failed to connect.");
-        }
-    }
-
     /// <summary>
     /// Initialzies and configures the ARR service object.
     /// </summary>
@@ -253,11 +227,20 @@ public class RemoteRenderingManager : MonoBehaviour
     {
         try
         {
-            // Connect first
-            await ConnectAsync();
+            // Make sure it's OK to start a new session
+            if (ConnectionStatus != ConnectionStatus.Disconnected) { throw new InvalidOperationException($"{nameof(CreateNewSessionAsync)} called but {nameof(ConnectionStatus)} is {ConnectionStatus}."); }
 
-            // Start a new session
-            RenderingSessionProperties props = await arrService.StartSession(new RenderingSessionCreationOptions(VMSize, (int)MaxLeaseTimeHours, (int)MaxLeaseTimeMinutes));
+            // Make sure the service object is initalized
+            EnsureServiceInitialized();
+
+            // Notify of new session
+            LogMessage("Creating a new session...");
+
+            // Create a new session and hold onto the task
+            sessionTask = arrService.StartSession(new RenderingSessionCreationOptions(VMSize, (int)MaxLeaseTimeHours, (int)MaxLeaseTimeMinutes));
+
+            // Wait for it to start and read the properties
+            RenderingSessionProperties props = await sessionTask;
 
             // Make sure it started
             if (props.Status != RenderingSessionStatus.Ready)
@@ -265,6 +248,20 @@ public class RemoteRenderingManager : MonoBehaviour
                 SessionGeneralContext context = new SessionGeneralContext()
                 {
                     ErrorMessage = "New rendering session failed to enter the ready state."
+                };
+                throw new RRSessionException(context);
+            }
+
+            // Notify of connecting
+            LogMessage($"Connecting to new session '{arrService.CurrentActiveSession.SessionUuid}'...");
+
+            // Connect to the session
+            ConnectionStatus res = await arrService.CurrentActiveSession.ConnectAsync(new RendererInitOptions());
+            if (!arrService.CurrentActiveSession.IsConnected)
+            {
+                SessionGeneralContext context = new SessionGeneralContext()
+                {
+                    ErrorMessage = "Failed to connect to new session."
                 };
                 throw new RRSessionException(context);
             }
@@ -307,7 +304,7 @@ public class RemoteRenderingManager : MonoBehaviour
         Entity modelEntity = arrService.CurrentActiveSession.Connection.CreateEntity();
 
         // Get the game object representation of this entity.
-        GameObject modelEntityGO = modelEntity.GetOrCreateGameObject(UnityCreationMode.DoNotCreateUnityComponents);
+        GameObject modelEntityGO = modelEntity.GetOrCreateGameObject(creationMode);
 
         // Ensure the entity will sync translations with the server.
         var sync = modelEntityGO.GetComponent<RemoteEntitySyncObject>();
@@ -398,21 +395,41 @@ public class RemoteRenderingManager : MonoBehaviour
 
         try
         {
+            // Make sure it's OK to resume a session
+            if (ConnectionStatus != ConnectionStatus.Disconnected) { throw new InvalidOperationException($"{nameof(ResumeSessionAsync)} called but {nameof(ConnectionStatus)} is {ConnectionStatus}."); }
+
             // Make sure the service object is initalized
             EnsureServiceInitialized();
 
-            // Connect first
-            await ConnectAsync();
+            // Notify of open session
+            LogMessage($"Opening existing session '{sessionId}'...");
 
-            // Open the existing session
-            RenderingSessionProperties props = await arrService.OpenSession(sessionId);
+            // Start opening the existing session and hold onto the task
+            sessionTask = arrService.OpenSession(sessionId);
+
+            // Wait for it to open
+            RenderingSessionProperties props = await sessionTask;
 
             // Make sure it's ready
             if (props.Status != RenderingSessionStatus.Ready)
             {
                 SessionGeneralContext context = new SessionGeneralContext()
                 {
-                    ErrorMessage = "$Rendering session { sessionId } not available."
+                    ErrorMessage = $"$Existing session '{sessionId}' is not available."
+                };
+                throw new RRSessionException(context);
+            }
+
+            // Notify of open session
+            LogMessage($"Connecting to existing session '{sessionId}'...");
+
+            // Connect to the session
+            ConnectionStatus res = await arrService.CurrentActiveSession.ConnectAsync(new RendererInitOptions());
+            if (!arrService.CurrentActiveSession.IsConnected)
+            {
+                SessionGeneralContext context = new SessionGeneralContext()
+                {
+                    ErrorMessage = $"Failed to connect to existing session '{sessionId}'."
                 };
                 throw new RRSessionException(context);
             }
@@ -442,7 +459,7 @@ public class RemoteRenderingManager : MonoBehaviour
     /// </summary>
     public void Disconnect()
     {
-        if (IsConnected)
+        if (ConnectionStatus == ConnectionStatus.Connected)
         {
             arrService.CurrentActiveSession.Disconnect();
         }
@@ -453,11 +470,26 @@ public class RemoteRenderingManager : MonoBehaviour
     /// <summary>
     /// Gets a value that indicates if currently connected to an ARR session.
     /// </summary>
-    public bool IsConnected
+    public ConnectionStatus ConnectionStatus
     {
         get
         {
-            return (arrService?.CurrentActiveSession?.ConnectionStatus == ConnectionStatus.Connected);
+            if ((sessionTask != null) && (!sessionTask.IsCompleted))
+            {
+                return ConnectionStatus.Connecting;
+            }
+            else
+            {
+                // No session task or completed at some piont, are we still connected?
+                if ((arrService != null) && (arrService.CurrentActiveSession != null))
+                {
+                    return arrService.CurrentActiveSession.ConnectionStatus;
+                }
+                else
+                {
+                    return ConnectionStatus.Disconnected;
+                }
+            }
         }
     }
 
