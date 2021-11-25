@@ -30,6 +30,8 @@ SpatialAnchorConfig.asset
 SpatialAnchorConfig.asset.meta
 RemoteRenderingConfig.asset
 RemoteRenderingConfig.asset.meta
+ObjectAnchorsConfig.asset
+ObjectAnchorsConfig.asset.meta
 
 # TextMesh Pro Package Files
 TextMesh Pro/
