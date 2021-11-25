@@ -54,6 +54,10 @@ namespace TaskGuidance
         [SerializeField]
         private GameObject annotationPrefab;
 
+        [Tooltip("The layers to be ignored when placing and annotating.")]
+        [SerializeField]
+        private LayerMask ignoreLayers;
+
         [Tooltip("The data about the object where annotations will be stored on disk.")]
         [SerializeField]
         private AnnotatedObjectData objectData;
@@ -236,13 +240,28 @@ namespace TaskGuidance
             // Get the details of the pointer click
             FocusDetails focus = eventData.Pointer.Result.Details;
 
-            // If there is no focused object under the pointer (including the surface mesh) then ignore
+            // If there is no focused object under the pointer (including the surface mesh)
+            // ignore the click
             if (focus.Object == null) { return; }
+
+            // If the object under the pointer is on an ignored layer, ignore the click
+            if ((ignoreLayers.value & (1 << focus.Object.layer)) > 0) { return; }
 
             // Attempt to place or annotate
             TryPlaceOrAnnotate(focus);
         }
         #endregion // IMixedRealityPointerHandler Members
+
+        #region Unity Overrides
+        protected virtual void Awake()
+        {
+            // If no layers are specified, make sure at least UI is ignored
+            if (ignoreLayers == 0)
+            {
+                ignoreLayers = LayerMask.GetMask("Ignore Raycast", "UI");
+            }
+        }
+        #endregion // Unity Overrides
 
         #region Public Methods
         /// <summary>

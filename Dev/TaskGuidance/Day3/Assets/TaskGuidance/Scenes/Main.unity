@@ -700,6 +700,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   annotationContainer: {fileID: 754840195}
   annotationPrefab: {fileID: 6123104189284357121, guid: 0bf5b21b38427244780ef8c4ea5be0e4, type: 3}
+  ignoreLayers:
+    serializedVersion: 2
+    m_Bits: 0
   objectData:
     annotations: []
     id: 
@@ -734,6 +737,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   annotationContainer: {fileID: 754840195}
   annotationPrefab: {fileID: 6123104189284357121, guid: 0bf5b21b38427244780ef8c4ea5be0e4, type: 3}
+  ignoreLayers:
+    serializedVersion: 2
+    m_Bits: 0
   objectData:
     annotations: []
     id: 
@@ -904,3 +910,80 @@ MonoBehaviour:
   _autoRenewLeaseThresholdMinutes: 5
   _autoRenewLeaseAmountMinutes: 15
   AutoStopSession: 0
+--- !u!1001 &2414925364379826387
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1461733326189840770, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733326710979605, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733326744554869, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_RootOrder
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010372, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1461733327006010373, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_Name
+      value: Log Window
+      objectReference: {fileID: 0}
+    - target: {fileID: 3832097040601926466, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 3832097042700144565, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: ce36c384cdb05d940a307cb55301c196, type: 3}
