@@ -1,0 +1,611 @@
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT license.
+#if UNITY_WSA
+using System;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using UnityEngine;
+
+using Microsoft.Azure.ObjectAnchors.Unity;
+
+#if WINDOWS_UWP
+using Windows.Storage;
+using Windows.Storage.Streams;
+#endif
+
+public class ObjectAnchorManager : MonoBehaviour
+{
+    #region Member Variables
+    private bool isLocating;
+    #endregion // Member Variables
+
+    public enum SearchAreaKind { Box, FieldOfView, Sphere };
+
+    [Tooltip("Far distance in meter of object search frustum.")]
+    public float SearchFrustumFarDistance = 4.0f;
+
+    [Tooltip("Horizontal field of view in degrees of object search frustum.")]
+    public float SearchFrustumHorizontalFovInDegrees = 75.0f;
+
+    [Tooltip("Aspect ratio (horizontal / vertical) of object search frustum.")]
+    public float SearchFrustumAspectRatio = 1.0f;
+
+    [Tooltip("Scale on model size to deduce object search area.")]
+    public float SearchAreaScaleFactor = 2.0f;
+
+    [Tooltip("Search area shape.")]
+    public SearchAreaKind SearchAreaShape = SearchAreaKind.Box;
+
+    [Tooltip("Observation mode.")]
+    public Microsoft.Azure.ObjectAnchors.ObjectObservationMode ObservationMode = Microsoft.Azure.ObjectAnchors.ObjectObservationMode.Ambient;
+
+    [Tooltip("Show environment observations.")]
+    public bool ShowEnvironmentObservations = false;
+
+    [Tooltip("Search single vs. multiple instances.")]
+    public bool SearchSingleInstance = true;
+
+    [Tooltip(@"Sentinel file in `Application\LocalCache` folder to enable capturing diagnostics.")]
+    public string DiagnosticsSentinelFilename = "debug";
+
+    [Tooltip("Material used to render a wire frame.")]
+    public Material WireframeMaterial;
+
+    [Tooltip("Material used to render the environment.")]
+    public Material EnvironmentMaterial;
+
+    [Tooltip("Whether to begin locating on start.")]
+    public bool LocatingOnStart;
+
+    /// <summary>
+    /// Flag to indicate the detection operation, 0 - in detection, 1 - detection completed.
+    /// </summary>
+    private int _detectionCompleted = 1;
+
+    /// <summary>
+    /// Cached camera instance.
+    /// </summary>
+    private Camera _cachedCameraMain;
+
+    /// <summary>
+    /// Object Anchors service object.
+    /// </summary>
+    private IObjectAnchorsService _objectAnchorsService;
+
+    /// <summary>
+    /// Bounding box associated with each object instance with guid as instance id.
+    /// </summary>
+    private Dictionary<Guid, WireframeBoundingBox> _boundingBoxes = new Dictionary<Guid, WireframeBoundingBox>();
+
+    /// <summary>
+    /// Query associated with each model with guid as model id.
+    /// </summary>
+    private Dictionary<Guid, ObjectQueryState> _objectQueries = new Dictionary<Guid, ObjectQueryState>();
+    private Dictionary<Guid, ObjectQueryState> InitializeObjectQueries()
+    {
+        var objectQueries = new Dictionary<Guid, ObjectQueryState>();
+
+        foreach (var modelId in _objectAnchorsService.ModelIds)
+        {
+            //
+            // Create a query and set the parameters.
+            //
+
+            var queryState = new GameObject($"ObjectQueryState for model {modelId}").AddComponent<ObjectQueryState>();
+            queryState.Query = _objectAnchorsService.CreateObjectQuery(modelId, ObservationMode);
+            if (ShowEnvironmentObservations)
+            {
+                queryState.EnvironmentMaterial = EnvironmentMaterial;
+            }
+
+            objectQueries.Add(modelId, queryState);
+        }
+
+        return objectQueries;
+    }
+
+    public enum ObjectAnchorsServiceEventKind
+    {
+        /// <summary>
+        /// Attempted to detect objects.
+        /// </summary>
+        DetectionAttempted,
+        /// <summary>
+        /// An new object is found for the first time.
+        /// </summary>
+        Added,
+        /// <summary>
+        /// State of a tracked object changed.
+        /// </summary>
+        Updated,
+        /// <summary>
+        /// An object lost tracking.
+        /// </summary>
+        Removed,
+    }
+
+    public class ObjectAnchorsServiceEventArgs : EventArgs
+    {
+        public ObjectAnchorsServiceEventKind Kind;
+        public IObjectAnchorsServiceEventArgs Args;
+    }
+
+    /// <summary>
+    /// A queue to cache the Object Anchors events.
+    /// Events are added in the callbacks from Object Anchors service, then consumed in the Update method.
+    /// </summary>
+    private ConcurrentQueue<ObjectAnchorsServiceEventArgs> _objectAnchorsEventQueue = new ConcurrentQueue<ObjectAnchorsServiceEventArgs>();
+
+    /// <summary>
+    /// Returns true if diagnostics capture is enabled.
+    /// </summary>
+    public bool IsDiagnosticsCaptureEnabled
+    {
+        get
+        {
+            return File.Exists(Path.Combine(Application.persistentDataPath.Replace('/', '\\'), DiagnosticsSentinelFilename));
+        }
+    }
+
+    private void Awake()
+    {
+        _objectAnchorsService = ObjectAnchorsService.GetService();
+
+        AddObjectAnchorsListeners();
+    }
+
+    private async void Start()
+    {
+        try
+        {
+            await _objectAnchorsService.InitializeAsync();
+            if (LocatingOnStart) { IsLocating = true; }
+        }
+        catch (System.ArgumentException ex)
+        {
+            #if WINDOWS_UWP
+            string message = ex.Message;
+            Windows.Foundation.IAsyncOperation<Windows.UI.Popups.IUICommand> dialog = null;
+            UnityEngine.WSA.Application.InvokeOnUIThread(() => dialog = new Windows.UI.Popups.MessageDialog(message, "Invalid account information").ShowAsync(), true);
+            await dialog;
+            #endif // WINDOWS_UWP
+            throw ex;
+        }
+
+        this.Log($"Object search initialized.");
+
+        foreach (var file in FileHelper.GetFilesInDirectory(Application.persistentDataPath, "*.ou"))
+        {
+            this.Log($"Loading model ({Path.GetFileNameWithoutExtension(file)})");
+
+            await _objectAnchorsService.AddObjectModelAsync(file.Replace('/', '\\'));
+        }
+
+        #if WINDOWS_UWP
+        StorageFolder objects3d = KnownFolders.Objects3D;
+        foreach (string filePath in FileHelper.GetFilesInDirectory(objects3d.Path, "*.ou"))
+        {
+            this.Log($"Loading model ({Path.GetFileNameWithoutExtension(filePath)})");
+
+            byte[] buffer =  await ReadFileBytesAsync(filePath);
+
+            await _objectAnchorsService.AddObjectModelAsync(buffer);
+        }
+        #endif
+
+        _objectQueries = InitializeObjectQueries();
+
+        if (IsDiagnosticsCaptureEnabled)
+        {
+            this.Log($"Start capture diagnostics.");
+
+            _objectAnchorsService.StartDiagnosticsSession();
+        }
+    }
+
+    private async void OnDestroy()
+    {
+        _objectAnchorsService.Pause();
+
+        await _objectAnchorsService.StopDiagnosticsSessionAsync();
+
+        RemoveObjectAnchorsListeners();
+
+        _objectQueries.Clear();
+
+        _objectAnchorsService.Dispose();
+    }
+
+    private void Update()
+    {
+        // Process current events.
+        HandleObjectAnchorsServiceEvent();
+
+        // Kick off a detection if detecting
+        if (IsLocating)
+        {
+            TrySearchObject();
+        }
+    }
+
+    private void AddObjectAnchorsListeners()
+    {
+        _objectAnchorsService.RunningChanged += ObjectAnchorsService_RunningChanged;
+        _objectAnchorsService.ObjectAdded += ObjectAnchorsService_ObjectAdded;
+        _objectAnchorsService.ObjectUpdated += ObjectAnchorsService_ObjectUpdated;
+        _objectAnchorsService.ObjectRemoved += ObjectAnchorsService_ObjectRemoved;
+    }
+
+    private void RemoveObjectAnchorsListeners()
+    {
+        _objectAnchorsService.RunningChanged -= ObjectAnchorsService_RunningChanged;
+        _objectAnchorsService.ObjectAdded -= ObjectAnchorsService_ObjectAdded;
+        _objectAnchorsService.ObjectUpdated -= ObjectAnchorsService_ObjectUpdated;
+        _objectAnchorsService.ObjectRemoved -= ObjectAnchorsService_ObjectRemoved;
+    }
+
+    private void ObjectAnchorsService_RunningChanged(object sender, ObjectAnchorsServiceStatus status)
+    {
+        // this.Log($"Object search {status}");
+    }
+
+    private void ObjectAnchorsService_ObjectAdded(object sender, IObjectAnchorsServiceEventArgs args)
+    {
+        // This event handler is called from a non-UI thread.
+
+        _objectAnchorsEventQueue.Enqueue(
+            new ObjectAnchorsServiceEventArgs
+        {
+            Kind = ObjectAnchorsServiceEventKind.Added,
+            Args = args
+        });
+    }
+
+    private void ObjectAnchorsService_ObjectUpdated(object sender, IObjectAnchorsServiceEventArgs args)
+    {
+        // This event handler is called from a non-UI thread.
+
+        _objectAnchorsEventQueue.Enqueue(
+            new ObjectAnchorsServiceEventArgs
+        {
+            Kind = ObjectAnchorsServiceEventKind.Updated,
+            Args = args
+        });
+    }
+
+    private void ObjectAnchorsService_ObjectRemoved(object sender, IObjectAnchorsServiceEventArgs args)
+    {
+        // This event handler is called from a non-UI thread.
+
+        _objectAnchorsEventQueue.Enqueue(
+            new ObjectAnchorsServiceEventArgs
+        {
+            Kind = ObjectAnchorsServiceEventKind.Removed,
+            Args = args
+        });
+    }
+
+    private void HandleObjectAnchorsServiceEvent()
+    {
+        Func<IObjectAnchorsServiceEventArgs, string> EventArgsFormatter = args =>
+        {
+            string timeString = args.InstanceId.ToString();
+            if (timeString.Length > 5) { timeString = timeString.Substring(0, 5); }
+            return $"[{args.LastUpdatedTime.ToLongTimeString()}] ${timeString}";
+        };
+
+        ObjectAnchorsServiceEventArgs _event;
+        while (_objectAnchorsEventQueue.TryDequeue(out _event))
+        {
+            switch (_event.Kind)
+            {
+                case ObjectAnchorsServiceEventKind.DetectionAttempted:
+                    {
+                        // this.Log($"detection attempted");
+                        break;
+                    }
+                case ObjectAnchorsServiceEventKind.Added:
+                    {
+                        this.LogRaw($"{EventArgsFormatter(_event.Args)} found, coverage {_event.Args.SurfaceCoverage.ToString("0.00")}");
+
+                        DrawBoundingBox(_event.Args);
+                        break;
+                    }
+                case ObjectAnchorsServiceEventKind.Updated:
+                    {
+                        // this.LogRaw($"{EventArgsFormatter(_event.Args)} updated, coverage {_event.Args.SurfaceCoverage.ToString("0.00")}");
+
+                        DrawBoundingBox(_event.Args);
+                        break;
+                    }
+                case ObjectAnchorsServiceEventKind.Removed:
+                    {
+                        this.LogRaw($"{EventArgsFormatter(_event.Args)} removed");
+
+                        var bbox = _boundingBoxes[_event.Args.InstanceId];
+                        _boundingBoxes.Remove(_event.Args.InstanceId);
+
+                        bbox.gameObject.SetActive(false);
+                        DestroyImmediate(bbox);
+
+                        break;
+                    }
+            }
+
+            // Notify on event
+            ServiceEvent?.Invoke(this, _event);
+        }
+    }
+
+    private void DrawBoundingBox(IObjectAnchorsServiceEventArgs instance)
+    {
+        WireframeBoundingBox bbox;
+        if (!_boundingBoxes.TryGetValue(instance.InstanceId, out bbox))
+        {
+            var boundingBox = _objectAnchorsService.GetModelBoundingBox(instance.ModelId);
+            Debug.Assert(boundingBox.HasValue);
+
+            bbox = new GameObject("Bounding Box").AddComponent<WireframeBoundingBox>();
+            bbox.transform.SetParent(transform, true);
+            bbox.gameObject.SetActive(false);
+            bbox.UpdateBounds(boundingBox.Value.Center, Vector3.Scale(boundingBox.Value.Extents, instance.ScaleChange), boundingBox.Value.Orientation, WireframeMaterial);
+
+            var mesh = new GameObject("Model Mesh");
+            var material = mesh.AddComponent<MeshRenderer>().sharedMaterial = WireframeMaterial;
+            mesh.transform.SetParent(bbox.transform);
+            MeshLoader.AddMesh(mesh, _objectAnchorsService, instance.ModelId);
+
+            _boundingBoxes.Add(instance.InstanceId, bbox);
+        }
+        else
+        {
+            bbox.gameObject.SetActive(false);
+        }
+
+        var location = instance.Location;
+        if (location.HasValue)
+        {
+            bbox.transform.SetPositionAndRotation(location.Value.Position, location.Value.Orientation);
+            bbox.gameObject.SetActive(true);
+        }
+    }
+
+    private void TrySearchObject()
+    {
+        if (Interlocked.CompareExchange(ref _detectionCompleted, 0, 1) == 1)
+        {
+            if (_cachedCameraMain == null)
+            {
+                _cachedCameraMain = Camera.main;
+            }
+
+            var cameraLocation = new ObjectAnchorsLocation
+            {
+                Position = _cachedCameraMain.transform.position,
+                Orientation = _cachedCameraMain.transform.rotation,
+            };
+
+            #if WINDOWS_UWP
+            var coordinateSystem = ObjectAnchorsWorldManager.WorldOrigin;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await DetectObjectAsync(coordinateSystem.TryToSpatialGraph(), cameraLocation);
+                }
+                catch (Exception ex)
+                {
+                    UnityEngine.WSA.Application.InvokeOnAppThread(() =>
+                    {
+                        this.Log($"Detection failed. Exception message: {ex.ToString()}");
+
+                    }, false);
+                }
+
+                Interlocked.CompareExchange(ref _detectionCompleted, 1, 0);
+            });
+            #endif
+        }
+    }
+
+    private Task DetectObjectAsync(Microsoft.Azure.ObjectAnchors.SpatialGraph.SpatialGraphCoordinateSystem? coordinateSystem, ObjectAnchorsLocation cameraLocation)
+    {
+        //
+        // Coordinate system may not be available at this time, try it later.
+        //
+
+        if (!coordinateSystem.HasValue)
+        {
+            return Task.CompletedTask;
+        }
+
+        //
+        // Get camera location and coordinate system.
+        //
+
+        var cameraForward = cameraLocation.Orientation * Vector3.forward;
+        var estimatedTargetLocation = new ObjectAnchorsLocation
+        {
+            Position = cameraLocation.Position + cameraForward * SearchFrustumFarDistance * 0.5f,
+            Orientation = Quaternion.Euler(0.0f, cameraLocation.Orientation.eulerAngles.y, 0.0f),
+        };
+
+        //
+        // Remove detected objects far away from the camera.
+        //
+
+        foreach (var instance in _objectAnchorsService.TrackingResults)
+        {
+            var location = instance.Location;
+            if (location.HasValue)
+            {
+                var modelBbox = _objectAnchorsService.GetModelBoundingBox(instance.ModelId);
+                Debug.Assert(modelBbox.HasValue);
+
+                // Compute the coordinate of instance bounding box center in Unity world.
+                var instancePosition = location.Value.Position + location.Value.Orientation * modelBbox.Value.Center;
+
+                var offset = instancePosition - cameraLocation.Position;
+
+                if (offset.magnitude > SearchFrustumFarDistance * 1.5f)
+                {
+                    _objectAnchorsService.RemoveObjectInstance(instance.InstanceId);
+                }
+            }
+        }
+
+        //
+        // Detect object(s) in field of view, bounding box, or sphere.
+        //
+
+        var objectQueries = new List<Microsoft.Azure.ObjectAnchors.ObjectQuery>();
+
+        var trackingResults = _objectAnchorsService.TrackingResults;
+
+        foreach (var objectQuery in _objectQueries)
+        {
+            var modelId = objectQuery.Key;
+            var query = objectQuery.Value.Query;
+
+            //
+            // Optionally skip a model detection if an instance is already found.
+            //
+
+            if (SearchSingleInstance)
+            {
+                if (trackingResults.Where(r => r.ModelId == modelId).Count() > 0)
+                {
+                    continue;
+                }
+            }
+
+            var modelBox = _objectAnchorsService.GetModelBoundingBox(modelId);
+            Debug.Assert(modelBox.HasValue);
+
+            query.SearchAreas.Clear();
+            switch (SearchAreaShape)
+            {
+                case SearchAreaKind.Box:
+                    {
+                        // Adapt bounding box size to model size. Note that Extents.z is model's height.
+                        float modelXYSize = new Vector2(modelBox.Value.Extents.x, modelBox.Value.Extents.y).magnitude;
+
+                        var boundingBox = new ObjectAnchorsBoundingBox
+                        {
+                            Center = estimatedTargetLocation.Position,
+                            Orientation = estimatedTargetLocation.Orientation,
+                            Extents = new Vector3(modelXYSize * SearchAreaScaleFactor, modelBox.Value.Extents.z * SearchAreaScaleFactor, modelXYSize * SearchAreaScaleFactor),
+                        };
+
+                        query.SearchAreas.Add(
+                            Microsoft.Azure.ObjectAnchors.ObjectSearchArea.FromOrientedBox(
+                                coordinateSystem.Value,
+                                boundingBox.ToSpatialGraph()));
+                        break;
+                    }
+
+                case SearchAreaKind.FieldOfView:
+                    {
+                        var fieldOfView = new ObjectAnchorsFieldOfView
+                        {
+                            Position = cameraLocation.Position,
+                            Orientation = cameraLocation.Orientation,
+                            FarDistance = SearchFrustumFarDistance,
+                            HorizontalFieldOfViewInDegrees = SearchFrustumHorizontalFovInDegrees,
+                            AspectRatio = SearchFrustumAspectRatio,
+                        };
+
+                        query.SearchAreas.Add(
+                            Microsoft.Azure.ObjectAnchors.ObjectSearchArea.FromFieldOfView(
+                                coordinateSystem.Value,
+                                fieldOfView.ToSpatialGraph()));
+                        break;
+                    }
+
+                case SearchAreaKind.Sphere:
+                    {
+                        // Adapt sphere radius to model size.
+                        float modelDiagonalSize = modelBox.Value.Extents.magnitude;
+
+                        var sphere = new ObjectAnchorsSphere
+                        {
+                            Center = estimatedTargetLocation.Position,
+                            Radius = modelDiagonalSize * 0.5f * SearchAreaScaleFactor,
+                        };
+
+                        query.SearchAreas.Add(
+                            Microsoft.Azure.ObjectAnchors.ObjectSearchArea.FromSphere(
+                                coordinateSystem.Value,
+                                sphere.ToSpatialGraph()));
+                        break;
+                    }
+            }
+
+            objectQueries.Add(query);
+        }
+
+        //
+        // Pause a while if detection is not required.
+        //
+
+        if (objectQueries.Count == 0)
+        {
+            Thread.Sleep(100);
+
+            return Task.CompletedTask;
+        }
+
+        //
+        // Run detection.
+        //
+
+        // Add event to the queue.
+        _objectAnchorsEventQueue.Enqueue(
+            new ObjectAnchorsServiceEventArgs
+        {
+            Kind = ObjectAnchorsServiceEventKind.DetectionAttempted,
+            Args = null
+        });
+
+        return _objectAnchorsService.DetectObjectAsync(objectQueries.ToArray());
+    }
+
+    /// <summary>
+    /// Gets or sets a value that indicates if the manager is detecting objects.
+    /// </summary>
+    public bool IsLocating { get => isLocating; set => isLocating = value; }
+
+    /// <summary>
+    /// Raised when an object anchor event has occurr
+    /// </summary>
+    public event EventHandler<ObjectAnchorsServiceEventArgs> ServiceEvent;
+
+    #if WINDOWS_UWP
+    private async Task<byte[]> ReadFileBytesAsync(string filePath)
+    {
+        StorageFile file = await StorageFile.GetFileFromPathAsync(filePath);
+        if (file == null)
+        {
+            return null;
+        }
+
+        using (IRandomAccessStream stream = await file.OpenReadAsync())
+        {
+            using (var reader = new DataReader(stream.GetInputStreamAt(0)))
+            {
+                await reader.LoadAsync((uint)stream.Size);
+                var bytes = new byte[stream.Size];
+                reader.ReadBytes(bytes);
+                return bytes;
+            }
+        }
+    }
+    #endif
+
+}
+#endif
